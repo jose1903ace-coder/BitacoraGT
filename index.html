@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Bitácora de Vuelos · GT</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#080d17; --panel:#0f1929; --panel2:#0c1422; --line:#1d2b42; --ink:#e2ecf8;
+  --muted:#7e93b3; --amber:#ffb454; --amber2:#ff9a2e; --grn:#5be584; --cyan:#56c7ff; --red:#ff6b6b;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace; --disp:'Saira Condensed','Archivo',system-ui,sans-serif; --body:'Archivo',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-tap-highlight-color:transparent}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+button{font-family:var(--disp);cursor:pointer}
+input,select,textarea{font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--amber)}
+select option{background:var(--panel2)}
+label{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);font-family:var(--disp);font-weight:600;display:block;margin-bottom:5px}
+.field{margin-bottom:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.btn{border:none;border-radius:11px;padding:13px 0;font-weight:700;font-size:15px;letter-spacing:.6px;color:#10131a;background:linear-gradient(180deg,var(--amber),var(--amber2))}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.btn.cyan{background:rgba(86,199,255,.12);border:1px solid var(--cyan);color:var(--cyan)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.tag{font-size:10px;font-weight:700;padding:1px 5px;border-radius:5px;font-family:var(--disp)}
+.hide{display:none!important}
+.leaflet-container{background:#0a1422;border-radius:12px;font-family:var(--body)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.leaflet-popup-content{font-family:var(--mono);font-size:12px}
+.leaflet-bar a{background:var(--panel);color:var(--ink);border-bottom:1px solid var(--line)}
+.leaflet-control-layers{background:var(--panel);color:var(--ink);border:1px solid var(--line)!important}
+#app{max-width:600px;margin:0 auto;padding:14px 14px 92px}
+.head{position:sticky;top:0;z-index:500;background:rgba(8,13,23,.93);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.brand{font-family:var(--disp);font-weight:700;letter-spacing:3px;font-size:11px;color:var(--amber)}
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:600;background:rgba(8,13,23,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex}
+.tabs .inner{max-width:600px;margin:0 auto;display:flex;width:100%}
+.tabs button{flex:1;padding:11px 0 13px;background:none;border:none;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.3px;white-space:nowrap;border-top:2px solid transparent}
+.tabs button.active{color:var(--amber);border-top-color:var(--amber)}
+.statbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 10px;text-align:center}
+.statbox .n{font-family:var(--disp);font-size:24px;font-weight:700;color:var(--amber);line-height:1}
+.statbox .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-family:var(--disp);margin-top:4px}
+.row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:9px;margin-bottom:7px;font-family:var(--mono);font-size:13px}
+.x{background:none;border:none;color:var(--red);font-size:17px;line-height:1}
+h2{font-family:var(--disp);font-weight:700;font-size:22px;margin:2px 0 14px}
+table.stats{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px}
+table.stats th,table.stats td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right}
+table.stats th:first-child,table.stats td:first-child{text-align:left;color:var(--muted)}
+table.stats th{font-family:var(--disp);color:var(--cyan);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.mapwrap{height:340px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.mapwrap.sm{height:260px}
+.maptools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.maptools button{flex:1;min-width:120px;border-radius:9px;padding:9px 0;font-size:12px;font-weight:600;background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+.maptools button.on{border-color:var(--amber);color:var(--amber);background:rgba(255,180,84,.1)}
+.note{color:var(--muted);font-size:12px;line-height:1.5}
+.err{color:var(--red);font-size:13px;font-family:var(--mono);margin-top:10px}
+.ok{color:var(--grn);font-size:13px;font-family:var(--mono);margin-top:10px}
+.spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--amber);border-radius:50%;animation:sp 1s linear infinite;margin:40px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* --- transiciones suaves --- */
+button,.btn,.maptools button,.tabs button,.statbox,.row,input,select,textarea,.cardhead,.iconbtn{transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease,transform .12s ease}
+.btn:active,.iconbtn:active{transform:scale(.97)}
+.cardhead:hover{background:rgba(255,255,255,.02)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+#app>div{animation:fadeUp .26s ease both}
+/* tarjeta de vuelo: expandir/colapsar suave */
+.cardbody{display:grid;grid-template-rows:0fr;transition:grid-template-rows .34s cubic-bezier(.4,0,.2,1)}
+.cardbody.open{grid-template-rows:1fr}
+.cardbody>.inner{overflow:hidden;min-height:0;opacity:0;padding:0 14px;transition:opacity .26s ease .04s}
+.cardbody.open>.inner{opacity:1;padding:0 14px 14px}
+.chev{align-self:center;color:var(--muted);font-size:12px;transition:transform .3s ease}
+.card.open .chev{transform:rotate(180deg);color:var(--amber)}
+.iconbtn{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--muted);padding:0}
+.iconbtn:hover{color:var(--amber);border-color:var(--amber)}
+.iconbtn.active{color:var(--amber);border-color:var(--amber);background:rgba(255,180,84,.12)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ============================================================
+   CONFIG — Backend Supabase ("Vitacora online vuelos")
+   La llave publishable es pública por diseño; RLS protege los datos.
+   ============================================================ */
+const SUPABASE_URL = "https://neqsviopvyesojercrcm.supabase.co";
+const SUPABASE_KEY = "sb_publishable_RY-785CGmlkGWE8IEH87lA_xXJfQHQl";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* Catálogo de respaldo (si la tabla aerodromes no respondiera) — AIP AD 1.3 */
+const AEROS_FALLBACK=[
+ {icao:"MGGT",nombre:"La Aurora (Cd. de Guatemala)",dep:"Guatemala",lat:14.58333,lon:-90.52639,intl:true,club:true},
+ {icao:"MGMM",nombre:"Mundo Maya (Flores/Sta. Elena)",dep:"Petén",lat:16.91361,lon:-89.86639,intl:true},
+ {icao:"MGQZ",nombre:"Los Altos (Quetzaltenango)",dep:"Quetzaltenango",lat:14.86611,lon:-91.50222,intl:true},
+ {icao:"MGBN",nombre:"Bananera (Morales)",dep:"Izabal",lat:15.47444,lon:-88.83722},
+ {icao:"MGCA",nombre:"Canilla",dep:"Quiché",lat:15.17056,lon:-90.85889},
+ {icao:"MGCP",nombre:"Champerico",dep:"Retalhuleu",lat:14.30639,lon:-91.9},
+ {icao:"MGCQ",nombre:"Chiquimula",dep:"Chiquimula",lat:14.83083,lon:-89.52083},
+ {icao:"MGCS",nombre:"Chisec",dep:"Alta Verapaz",lat:15.81639,lon:-90.27444},
+ {icao:"MGCT",nombre:"Coatepeque",dep:"Quetzaltenango",lat:14.69472,lon:-91.88139},
+ {icao:"MGCB",nombre:"Cobán",dep:"Alta Verapaz",lat:15.46889,lon:-90.40667},
+ {icao:"MGDL",nombre:"Dos Lagunas",dep:"Petén",lat:17.69194,lon:-89.52472},
+ {icao:"MGES",nombre:"Esquipulas",dep:"Chiquimula",lat:14.5675,lon:-89.32611},
+ {icao:"MGFB",nombre:"Fray Bartolomé de las Casas",dep:"Alta Verapaz",lat:15.80417,lon:-89.85083},
+ {icao:"MGHT",nombre:"Huehuetenango",dep:"Huehuetenango",lat:15.31667,lon:-91.505},
+ {icao:"MGJU",nombre:"Jutiapa",dep:"Jutiapa",lat:14.29139,lon:-89.94472},
+ {icao:"MGNB",nombre:"Nebaj",dep:"Quiché",lat:15.44694,lon:-91.16167},
+ {icao:"MGLL",nombre:"La Libertad",dep:"Petén",lat:16.74889,lon:-90.14222},
+ {icao:"MGPG",nombre:"Playa Grande (Cantabal)",dep:"Quiché",lat:15.9975,lon:-90.74167},
+ {icao:"MGPP",nombre:"Poptún",dep:"Petén",lat:16.32611,lon:-89.41639},
+ {icao:"MGPB",nombre:"Puerto Barrios",dep:"Izabal",lat:15.73083,lon:-88.58361},
+ {icao:"MGQC",nombre:"Quiché (Santa Cruz)",dep:"Quiché",lat:15.01194,lon:-91.15083},
+ {icao:"MGRT",nombre:"Retalhuleu (Base Aérea del Sur)",dep:"Retalhuleu",lat:14.52167,lon:-91.69667},
+ {icao:"MGRB",nombre:"Rubelsanto",dep:"Alta Verapaz",lat:15.99222,lon:-90.44528},
+ {icao:"MGSJ",nombre:"Puerto San José",dep:"Escuintla",lat:13.93611,lon:-90.83583},
+ {icao:"MGSM",nombre:"San Marcos",dep:"San Marcos",lat:14.95528,lon:-91.80833},
+ {icao:"MGZA",nombre:"Zacapa (La Fragua)",dep:"Zacapa",lat:14.96,lon:-89.53889},
+ {icao:"MGEF",nombre:"El Triunfo (Masagua) · privado",dep:"Escuintla",lat:14.01528,lon:-90.77306},
+ {icao:"MGHH",nombre:"Iztapa · Aeroclub",dep:"Escuintla",lat:13.93083,lon:-90.72944,club:true},
+ {icao:"MGRF",nombre:"Monterrico · Aeroclub",dep:"Santa Rosa",lat:13.89472,lon:-90.48472,club:true},
+ {icao:"MGRD",nombre:"Río Dulce · Aeroclub",dep:"Izabal",lat:15.66889,lon:-88.96278,club:true},
+];
+
+/* =================== Estado =================== */
+const S={user:null,profile:null,flights:[],favs:[],aeros:[],airspaces:[],editingId:null,tab:"vuelos",climaIcao:"MGGT",openAipKey:"fd47cae925e5e1dcabbe8bed78a71c20"};
+
+/* =================== Carga de datos (Supabase) =================== */
+async function loadAeros(){
+  try{
+    const {data,error}=await sb.from('aerodromes').select('*').order('icao');
+    if(error||!data||!data.length){S.aeros=AEROS_FALLBACK.slice();return;}
+    S.aeros=data.map(r=>({icao:r.icao,nombre:r.name,dep:r.dep,lat:r.lat,lon:r.lon,intl:!!r.intl,club:!!r.club}));
+  }catch(e){S.aeros=AEROS_FALLBACK.slice();}
+}
+async function loadAirspaces(){
+  try{const {data,error}=await sb.from('airspaces').select('*');S.airspaces=(error||!data)?[]:data;}
+  catch(e){S.airspaces=[];}
+}
+function mapFlightRow(r){
+  return {id:r.id,matricula:r.matricula||'',fecha:r.fecha,horas:r.horas??0,pic:r.pic??0,dual:r.dual??0,
+    noche:r.noche??0,ifr:r.ifr??0,xc:r.xc??0,fuel:r.fuel||'',carga:r.carga||'',
+    aterrizajes:r.aterrizajes??0,despegues:r.despegues??0,notas:r.notas||'',
+    origin:r.origin||null,dest:r.dest||null,checkpoints:Array.isArray(r.checkpoints)?r.checkpoints:[]};
+}
+async function loadFlights(){
+  try{
+    const {data,error}=await sb.from('flights').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});
+    S.flights=(error||!data)?[]:data.map(mapFlightRow);
+  }catch(e){S.flights=[];}
+}
+async function loadFavs(){
+  try{
+    const {data,error}=await sb.from('waypoints').select('*').order('created_at');
+    S.favs=(error||!data)?[]:data.map(r=>({id:r.id,name:r.name,lat:r.lat,lon:r.lon}));
+  }catch(e){S.favs=[];}
+}
+async function loadProfile(){
+  try{const {data}=await sb.from('profiles').select('*').eq('id',S.user.id).maybeSingle();S.profile=data||null;}
+  catch(e){S.profile=null;}
+}
+async function loadAll(){await Promise.all([loadProfile(),loadAeros(),loadAirspaces(),loadFlights(),loadFavs()]);}
+function sortFlights(){S.flights.sort((a,b)=>a.fecha<b.fecha?1:a.fecha>b.fecha?-1:0);}
+
+/* =================== Puntos (aeródromos + favoritos) =================== */
+function allPoints(){
+  const a=S.aeros.map(x=>({id:x.icao,label:x.icao+" — "+x.nombre,lat:x.lat,lon:x.lon,kind:"aero",aero:x}));
+  const f=S.favs.map(x=>({id:"fav_"+x.id,label:"★ "+x.name,lat:x.lat,lon:x.lon,kind:"fav",fav:x}));
+  return{a,f};
+}
+function pointById(id){
+  if(!id)return null;
+  if(id.startsWith("fav_")){const f=S.favs.find(x=>"fav_"+x.id===id);return f?{id:"fav_"+f.id,name:f.name,lat:f.lat,lon:f.lon}:null;}
+  const a=S.aeros.find(x=>x.icao===id);return a?{id:a.icao,name:a.icao,lat:a.lat,lon:a.lon}:null;
+}
+function routeOf(f){
+  const pts=[];
+  if(f.origin)pts.push(f.origin);
+  (f.checkpoints||[]).forEach(c=>pts.push(c));
+  if(f.dest)pts.push(f.dest);
+  return pts;
+}
+
+/* =================== Utilidades de tiempo =================== */
+const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n;};
+function hm(dec){const h=Math.floor(dec);const m=Math.round((dec-h)*60);return h+":"+String(m).padStart(2,"0");}
+function fmt(dec){return Number(dec).toFixed(1);}
+
+/* =================== Mapas (Leaflet) =================== */
+function baseLayers(){
+  const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
+  return{street,sat};
+}
+function dotIcon(color,r){return L.divIcon({className:'',html:'<div style="width:'+(r*2)+'px;height:'+(r*2)+'px;border-radius:50%;background:'+color+';border:1.5px solid #06101e;box-shadow:0 0 6px '+color+'80"></div>',iconSize:[r*2,r*2],iconAnchor:[r,r]});}
+function aspColor(t){t=(t||'').toUpperCase();if(t==='P')return'#ff6b6b';if(t==='R')return'#ffb454';if(t==='D')return'#ff9a2e';if(t==='CTR')return'#56c7ff';if(t==='TMA')return'#c792ea';if(t==='FIR')return'#5be584';return'#9fb3d1';}
+
+let mainMap,mainMarkers,mainHistory,mainAirsp,mainOpenAip,histOn=false,aspOn=false;
+function ensureMainMap(){
+  if(mainMap){mainMap.invalidateSize();return;}
+  const {street,sat}=baseLayers();
+  mainMap=L.map('mainmap',{center:[15.6,-90.3],zoom:7,layers:[street],zoomControl:true});
+  L.control.layers({"Mapa":street,"Satélite":sat},null,{position:'topright'}).addTo(mainMap);
+  // Capa aeronáutica OpenAIP: activa por defecto (predeterminada)
+  if(S.openAipKey){
+    mainOpenAip=L.tileLayer('https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey='+encodeURIComponent(S.openAipKey),
+      {maxZoom:14,minZoom:4,opacity:.9,attribution:'© OpenAIP'}).addTo(mainMap);
+  }
+  mainMarkers=L.layerGroup().addTo(mainMap);
+  mainAirsp=L.layerGroup().addTo(mainMap);
+  mainHistory=L.layerGroup().addTo(mainMap);
+  renderMainMarkers();
+  setTimeout(()=>mainMap.invalidateSize(),120);
+}
+function renderMainMarkers(){
+  if(!mainMarkers)return;mainMarkers.clearLayers();
+  S.aeros.forEach(a=>{
+    L.marker([a.lat,a.lon],{icon:dotIcon(a.intl?'#ffb454':(a.club?'#5be584':'#56c7ff'),a.intl?6:5)})
+     .bindPopup('<b>'+a.icao+'</b>'+(a.intl?' · INTL':'')+(a.club?' · CLUB':'')+'<br>'+a.nombre+'<br>'+a.lat.toFixed(4)+', '+a.lon.toFixed(4)).addTo(mainMarkers);
+  });
+  S.favs.forEach(f=>{
+    L.marker([f.lat,f.lon],{icon:dotIcon('#9fb3d1',6)})
+     .bindPopup('<b>★ '+f.name+'</b><br>'+f.lat.toFixed(4)+', '+f.lon.toFixed(4)).addTo(mainMarkers);
+  });
+}
+function toggleHistory(){
+  histOn=!histOn;mainHistory.clearLayers();
+  if(histOn){
+    const colors=['#ffb454','#56c7ff','#5be584','#ff6b6b','#c792ea','#ffd166','#06d6a0'];
+    let all=[];
+    S.flights.forEach((f,i)=>{
+      const pts=routeOf(f).map(p=>[p.lat,p.lon]);
+      if(pts.length>=2){L.polyline(pts,{color:colors[i%colors.length],weight:2.5,opacity:.85}).addTo(mainHistory);all=all.concat(pts);}
+    });
+    if(all.length)mainMap.fitBounds(L.latLngBounds(all).pad(0.2));
+  }
+  document.getElementById('histBtn').classList.toggle('on',histOn);
+}
+function toggleAirspaces(){
+  aspOn=!aspOn;mainAirsp.clearLayers();
+  if(aspOn){
+    if(!S.airspaces.length){
+      const b=document.getElementById('aspBtn');b.classList.add('on');
+      const n=document.getElementById('aspNote');if(n)n.classList.remove('hide');
+      return;
+    }
+    S.airspaces.forEach(as=>{
+      if(!as.geometry)return;
+      try{
+        L.geoJSON({type:'Feature',geometry:as.geometry,properties:{}},
+          {style:{color:aspColor(as.type),weight:2,fillColor:aspColor(as.type),fillOpacity:.12}})
+         .bindPopup('<b>'+(as.name||'—')+'</b><br>'+(as.type||'')+(as.class?' · Clase '+as.class:'')+'<br>'+(as.lower_limit||'?')+' – '+(as.upper_limit||'?')+(as.source?'<br><i>'+as.source+'</i>':''))
+         .addTo(mainAirsp);
+      }catch(e){}
+    });
+  }
+  document.getElementById('aspBtn').classList.toggle('on',aspOn);
+  const n=document.getElementById('aspNote');if(n)n.classList.toggle('hide',!(aspOn&&!S.airspaces.length));
+}
+
+
+let formMap,formLayer;
+function ensureFormMap(){
+  if(formMap){formMap.invalidateSize();return;}
+  const {street,sat}=baseLayers();
+  formMap=L.map('formmap',{center:[15.6,-90.3],zoom:6,layers:[street]});
+  L.control.layers({"Mapa":street,"Satélite":sat},null,{position:'topright'}).addTo(formMap);
+  formLayer=L.layerGroup().addTo(formMap);
+  setTimeout(()=>formMap.invalidateSize(),120);
+}
+function drawFormRoute(f){
+  if(!formLayer)return;formLayer.clearLayers();
+  const pts=routeOf(f);
+  pts.forEach((p,i)=>{
+    const first=i===0,last=i===pts.length-1;
+    const col=first?'#5be584':last?'#ff9a2e':'#ffffff';
+    L.marker([p.lat,p.lon],{icon:dotIcon(col,first||last?7:5)}).bindPopup(p.name).addTo(formLayer);
+  });
+  if(pts.length>=2){
+    const line=pts.map(p=>[p.lat,p.lon]);
+    L.polyline(line,{color:'#ffb454',weight:3,dashArray:'8 6'}).addTo(formLayer);
+    formMap.fitBounds(L.latLngBounds(line).pad(0.3));
+  }else if(pts.length===1){formMap.setView([pts[0].lat,pts[0].lon],9);}
+}
+
+/* =================== Render base =================== */
+const root=()=>document.getElementById('root');
+function el(html){const d=document.createElement('div');d.innerHTML=html.trim();return d.firstChild;}
+
+/* =================== Autenticación (Supabase Auth) =================== */
+function renderAuth(){
+  root().innerHTML='';
+  const v=el(`<div style="min-height:100vh;display:grid;place-items:center;padding:20px">
+    <div style="width:100%;max-width:380px">
+      <div style="text-align:center;margin-bottom:22px">
+        <div class="brand">BITÁCORA · GT</div>
+        <div style="font-family:var(--disp);font-weight:700;font-size:30px;margin-top:4px">Registro de Vuelos</div>
+        <div class="note" style="margin-top:6px">Aeródromos de Guatemala · mapa satelital · estadísticas</div>
+      </div>
+      <div class="card" style="padding:22px">
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button id="tLogin" class="btn ghost" style="flex:1;padding:9px 0">Ingresar</button>
+          <button id="tSignup" class="btn ghost" style="flex:1;padding:9px 0">Crear cuenta</button>
+        </div>
+        <div class="field"><label>Correo electrónico</label><input id="email" type="email" autocapitalize="none" placeholder="piloto@correo.com"></div>
+        <div class="field"><label>Contraseña</label><input id="pw" type="password" placeholder="••••••"></div>
+        <div class="field hide" id="pw2f"><label>Repetir contraseña</label><input id="pw2" type="password" placeholder="••••••"></div>
+        <div id="signupExtra" class="hide">
+          <div class="field"><label>Nombre completo</label><input id="fullName" placeholder="Como aparece en tu licencia"></div>
+          <div class="field"><label>Número de licencia</label><input id="license" placeholder="Ej. PPL-1234 (DGAC)"></div>
+          <div class="field"><label>Fecha de nacimiento</label><input id="birthdate" type="date"></div>
+        </div>
+        <div id="authErr" class="err hide"></div>
+        <div id="authOk" class="ok hide"></div>
+        <button id="authGo" class="btn" style="width:100%;margin-top:8px">INGRESAR</button>
+      </div>
+      <div class="note" style="text-align:center;margin-top:14px">Tu cuenta y tus vuelos se guardan en la nube (Supabase) y quedan disponibles desde cualquier dispositivo.</div>
+    </div></div>`);
+  root().appendChild(v);
+  let mode='login';
+  const setMode=m=>{mode=m;
+    document.getElementById('tLogin').style.background=m==='login'?'rgba(255,180,84,.14)':'';document.getElementById('tLogin').style.color=m==='login'?'var(--amber)':'var(--muted)';document.getElementById('tLogin').style.border='1px solid '+(m==='login'?'var(--amber)':'var(--line)');
+    document.getElementById('tSignup').style.background=m==='signup'?'rgba(255,180,84,.14)':'';document.getElementById('tSignup').style.color=m==='signup'?'var(--amber)':'var(--muted)';document.getElementById('tSignup').style.border='1px solid '+(m==='signup'?'var(--amber)':'var(--line)');
+    document.getElementById('pw2f').classList.toggle('hide',m!=='signup');
+    document.getElementById('signupExtra').classList.toggle('hide',m!=='signup');
+    document.getElementById('authGo').textContent=m==='login'?'INGRESAR':'CREAR CUENTA';
+    document.getElementById('authErr').classList.add('hide');document.getElementById('authOk').classList.add('hide');};
+  setMode('login');
+  document.getElementById('tLogin').onclick=()=>setMode('login');
+  document.getElementById('tSignup').onclick=()=>setMode('signup');
+  const err=m=>{const e=document.getElementById('authErr');e.textContent=m;e.classList.remove('hide');document.getElementById('authOk').classList.add('hide');};
+  const ok=m=>{const e=document.getElementById('authOk');e.textContent=m;e.classList.remove('hide');document.getElementById('authErr').classList.add('hide');};
+  document.getElementById('authGo').onclick=async()=>{
+    const btn=document.getElementById('authGo');
+    const email=document.getElementById('email').value.trim().toLowerCase();
+    const pw=document.getElementById('pw').value, pw2=(document.getElementById('pw2')||{}).value;
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return err("Ingresá un correo válido.");
+    if(pw.length<6)return err("La contraseña debe tener al menos 6 caracteres.");
+    if(mode==='signup'&&pw!==pw2)return err("Las contraseñas no coinciden.");
+    let fullName="",license="",birthdate="";
+    if(mode==='signup'){
+      fullName=document.getElementById('fullName').value.trim();
+      license=document.getElementById('license').value.trim();
+      birthdate=document.getElementById('birthdate').value;
+      if(!fullName)return err("Ingresá tu nombre completo.");
+      if(!license)return err("Ingresá tu número de licencia.");
+      if(!birthdate)return err("Ingresá tu fecha de nacimiento.");
+    }
+    btn.disabled=true;btn.textContent="Procesando…";
+    try{
+      if(mode==='signup'){
+        const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{full_name:fullName,license:license,birthdate:birthdate}}});
+        if(error)throw error;
+        if(data.session){await boot();return;}
+        ok("Cuenta creada. Si tu proyecto pide confirmación, revisá tu correo y luego ingresá.");
+      }else{
+        const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+        if(error)throw error;
+        if(data.session){await boot();return;}
+      }
+    }catch(e){err(traducirError(e.message||String(e)));}
+    btn.disabled=false;btn.textContent=mode==='login'?'INGRESAR':'CREAR CUENTA';
+  };
+}
+function traducirError(m){
+  m=(m||'').toLowerCase();
+  if(m.includes('invalid login'))return"Correo o contraseña incorrectos.";
+  if(m.includes('already registered')||m.includes('already been registered'))return"Ya existe una cuenta con ese correo.";
+  if(m.includes('email not confirmed'))return"Tu correo aún no está confirmado. Revisá tu bandeja.";
+  if(m.includes('password'))return"La contraseña no cumple los requisitos (mínimo 6 caracteres).";
+  return"No se pudo completar: "+m;
+}
+
+async function logout(){await sb.auth.signOut();S.user=null;mainMap=null;formMap=null;renderAuth();}
+
+/* =================== Shell =================== */
+function renderApp(){
+  root().innerHTML='';
+  const shell=el(`<div>
+    <div class="head"><div><div class="brand">BITÁCORA · GT</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted)" id="who"></div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="perfilBtn" class="iconbtn" title="Perfil" aria-label="Perfil">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>
+        </button>
+        <button id="logout" class="btn ghost" style="padding:7px 14px;font-size:12px">Salir</button>
+      </div></div>
+    <div id="app"></div>
+    <div class="tabs"><div class="inner">
+      ${[ ["vuelos","Vuelos"],["mapa","Mapa"],["clima","Clima"],["stats","Stats"]].map(t=>`<button data-tab="${t[0]}">${t[1]}</button>`).join("")}
+    </div></div></div>`);
+  root().appendChild(shell);
+  document.getElementById('who').textContent=(S.profile&&S.profile.display_name)?S.profile.display_name:(S.user?S.user.email:'');
+  document.getElementById('logout').onclick=logout;
+  document.getElementById('perfilBtn').onclick=()=>{S.editingId=null;S.tab="perfil";paint();};
+  shell.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.editingId=null;S.tab=b.dataset.tab;paint();});
+  paint();
+}
+function paint(){
+  mainMap=null;formMap=null;
+  if(window.wxTimers){window.wxTimers.forEach(t=>clearInterval(t));}
+  window.wxTimers=[];
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===S.tab));
+  const pb=document.getElementById('perfilBtn');if(pb)pb.classList.toggle('active',S.tab==="perfil");
+  const app=document.getElementById('app');app.innerHTML='';
+  if(S.tab==="vuelos")viewVuelos(app);
+  else if(S.tab==="nuevo")viewForm(app);
+  else if(S.tab==="mapa")viewMapa(app);
+  else if(S.tab==="clima")viewClima(app);
+  else if(S.tab==="stats")viewStats(app);
+  else if(S.tab==="perfil")viewPerfil(app);
+}
+
+function totals(list){
+  const t={total:0,pic:0,dual:0,noche:0,ifr:0,xc:0,land:0,vuelos:list.length};
+  list.forEach(f=>{t.total+=num(f.horas);t.pic+=num(f.pic);t.dual+=num(f.dual);t.noche+=num(f.noche);t.ifr+=num(f.ifr);t.xc+=num(f.xc);t.land+=parseInt(f.aterrizajes)||0;});
+  return t;
+}
+
+/* =================== Vista: Vuelos =================== */
+function viewVuelos(app){
+  const t=totals(S.flights);
+  const head=el(`<div>
+    <div class="grid3" style="margin-bottom:12px">
+      <div class="statbox"><div class="n">${t.vuelos}</div><div class="l">Vuelos</div></div>
+      <div class="statbox"><div class="n">${fmt(t.total)}</div><div class="l">Horas (dec)</div></div>
+      <div class="statbox"><div class="n">${hm(t.total)}</div><div class="l">H:MM</div></div>
+    </div>
+    <button id="newFlightBtn" class="btn" style="width:100%;margin-bottom:14px">+ Nuevo vuelo</button>
+    </div>`);
+  app.appendChild(head);
+  document.getElementById('newFlightBtn').onclick=()=>{S.editingId=null;S.tab="nuevo";paint();};
+  if(!S.flights.length){
+    const e=el(`<div style="text-align:center;color:var(--muted);padding:50px 20px"><div>Aún no hay vuelos registrados.</div><button class="btn" style="margin-top:16px;padding:11px 22px">Registrar primer vuelo</button></div>`);
+    e.querySelector('button').onclick=()=>{S.editingId=null;S.tab="nuevo";paint();};
+    app.appendChild(e);return;
+  }
+  S.flights.forEach(f=>app.appendChild(flightCard(f)));
+}
+function flightCard(f){
+  const path=routeOf(f).map(p=>p.name).join(" → ")||"—";
+  const c=el(`<div class="card" style="margin-bottom:11px;overflow:hidden">
+    <div class="cardhead" style="padding:14px;display:flex;justify-content:space-between;gap:10px;cursor:pointer">
+      <div style="min-width:0"><div style="font-family:var(--disp);font-weight:700;font-size:18px;color:var(--amber)">${f.matricula||"—"}</div>
+        <div style="font-family:var(--mono);font-size:13px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${path}</div></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-shrink:0">
+        <div style="text-align:right"><div style="font-family:var(--mono);color:var(--cyan);font-size:13px">${f.fecha}</div>
+        <div style="font-family:var(--mono);color:var(--muted);font-size:12px">${fmt(num(f.horas))} h · ${hm(num(f.horas))}</div></div>
+        <span class="chev">▾</span></div>
+    </div>
+    <div class="cardbody"><div class="inner"></div></div></div>`);
+  const body=c.querySelector('.cardbody');
+  const inner=c.querySelector('.inner');
+  c.querySelector('.cardhead').onclick=()=>{
+    const opening=!body.classList.contains('open');
+    body.classList.toggle('open',opening);
+    c.classList.toggle('open',opening);
+    if(!body.dataset.built){
+      body.dataset.built="1";
+      inner.innerHTML=`<div class="mapwrap sm" id="mini_${f.id}"></div>
+        <div class="grid3" style="margin-top:12px">
+          ${stat("PIC",fmt(num(f.pic)))}${stat("Dual",fmt(num(f.dual)))}${stat("Nocturno",fmt(num(f.noche)))}
+          ${stat("IFR",fmt(num(f.ifr)))}${stat("Travesía",fmt(num(f.xc)))}${stat("Aterr./Desp.",(f.aterrizajes||0))}
+          ${stat("Combustible",(f.fuel||"—"))}${stat("Carga",f.carga||"—")}${stat("Total",fmt(num(f.horas))+" h")}
+        </div>
+        ${f.notas?`<div style="margin-top:12px;padding:11px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;font-size:13px;line-height:1.5"><span class="l">Notas</span><br>${(f.notas+'').replace(/</g,"&lt;")}</div>`:""}
+        <div style="display:flex;gap:10px;margin-top:13px">
+          <button class="btn cyan edit" style="flex:1;padding:10px 0">Editar</button>
+          <button class="btn ghost del" style="padding:10px 18px;color:var(--red)">Eliminar</button></div>`;
+      inner.querySelector('.edit').onclick=()=>{S.editingId=f.id;S.tab="nuevo";paint();};
+      inner.querySelector('.del').onclick=async()=>{
+        if(!confirm("¿Eliminar este vuelo?"))return;
+        const {error}=await sb.from('flights').delete().eq('id',f.id);
+        if(error)return alert("No se pudo eliminar: "+error.message);
+        S.flights=S.flights.filter(x=>x.id!==f.id);paint();
+      };
+      setTimeout(()=>{const m=L.map('mini_'+f.id,{center:[15.6,-90.3],zoom:6,attributionControl:false});
+        body._map=m;
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(m);
+        const pts=routeOf(f);pts.forEach((p,i)=>L.marker([p.lat,p.lon],{icon:dotIcon(i===0?'#5be584':i===pts.length-1?'#ff9a2e':'#fff',6)}).addTo(m));
+        if(pts.length>=2){const ln=pts.map(p=>[p.lat,p.lon]);L.polyline(ln,{color:'#ffb454',weight:3,dashArray:'8 6'}).addTo(m);m.fitBounds(L.latLngBounds(ln).pad(0.3));}
+        else if(pts.length===1)m.setView([pts[0].lat,pts[0].lon],10);
+        setTimeout(()=>m.invalidateSize(),120);},120);
+    }
+    if(opening&&body._map)setTimeout(()=>body._map.invalidateSize(),360);
+  };
+  return c;
+}
+function stat(l,v){return `<div><div class="l">${l}</div><div style="font-family:var(--mono);font-size:14px">${v}</div></div>`;}
+
+/* =================== Vista: Nuevo / Editar =================== */
+function blankFlight(){return{matricula:"TG-",fecha:new Date().toISOString().slice(0,10),horas:"1.0",pic:"0",dual:"0",noche:"0",ifr:"0",xc:"0",fuel:"",origin:null,dest:null,originId:"MGGT",destId:"",checkpoints:[],carga:"",aterrizajes:"1",despegues:"1",notas:""};}
+function viewForm(app){
+  let editing;
+  if(S.editingId){
+    const src=S.flights.find(x=>x.id===S.editingId);
+    editing=JSON.parse(JSON.stringify(src));
+    editing.originId=editing.origin?editing.origin.id:"";
+    editing.destId=editing.dest?editing.dest.id:"";
+  }else{
+    editing=blankFlight();
+    editing.origin=pointById(editing.originId);
+  }
+  const {a,f}=allPoints();
+  const optGroups=`<optgroup label="Aeródromos">${a.map(p=>`<option value="${p.id}">${p.label}</option>`).join("")}</optgroup>`+
+    (f.length?`<optgroup label="Favoritos / Waypoints">${f.map(p=>`<option value="${p.id}">${p.label}</option>`).join("")}</optgroup>`:"");
+  const c=el(`<div>
+    <h2>${S.editingId?"Editar vuelo":"Nuevo plan de vuelo"}</h2>
+    <div class="mapwrap sm" id="formmap"></div>
+    <div class="note" style="text-align:center;margin:8px 0 16px"><span style="color:var(--grn)">● origen</span> · <span>● checkpoint</span> · <span style="color:var(--amber2)">● destino</span> — zoom y satélite disponibles</div>
+    <div class="grid2">
+      <div class="field"><label>Matrícula</label><input id="matricula" value="${editing.matricula||''}"></div>
+      <div class="field"><label>Fecha</label><input id="fecha" type="date" value="${editing.fecha}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Origen</label><select id="originId"><option value="">—</option>${optGroups}</select></div>
+      <div class="field"><label>Destino final</label><select id="destId"><option value="">—</option>${optGroups}</select></div>
+    </div>
+    <div class="card" style="padding:13px;margin-bottom:13px">
+      <label>Checkpoints de la ruta</label>
+      <div id="cpList"></div>
+      <div style="display:flex;gap:6px;margin-top:8px"><select id="cpSel"><option value="">+ Agregar punto…</option>${optGroups}</select>
+        <button id="cpAdd" class="btn cyan" style="padding:0 16px">Añadir</button></div>
+    </div>
+    <div class="field"><label>Duración total (horas decimales · ej. 1.5)</label><input id="horas" type="number" step="0.1" min="0" value="${editing.horas}"></div>
+    <div class="grid3">
+      <div class="field"><label>PIC</label><input id="pic" type="number" step="0.1" min="0" value="${editing.pic}"></div>
+      <div class="field"><label>Dual</label><input id="dual" type="number" step="0.1" min="0" value="${editing.dual}"></div>
+      <div class="field"><label>Nocturno</label><input id="noche" type="number" step="0.1" min="0" value="${editing.noche}"></div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>IFR</label><input id="ifr" type="number" step="0.1" min="0" value="${editing.ifr}"></div>
+      <div class="field"><label>Travesía (XC)</label><input id="xc" type="number" step="0.1" min="0" value="${editing.xc}"></div>
+      <div class="field"><label>Combustible</label><input id="fuel" value="${editing.fuel||""}" placeholder="gal / lt"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Carga a bordo</label><input id="carga" value="${editing.carga||""}" placeholder="kg / pax"></div>
+      <div class="field"><label>Aterrizajes / Despegues</label><input id="ciclos" type="number" min="0" value="${editing.aterrizajes}"></div>
+    </div>
+    <div class="field"><label>Notas</label><textarea id="notas" style="min-height:80px;font-family:var(--body)" placeholder="Meteo, observaciones…">${editing.notas||""}</textarea></div>
+    <div id="formErr" class="err hide"></div>
+    <div style="display:flex;gap:10px"><button id="save" class="btn" style="flex:1">GUARDAR VUELO</button><button id="cancel" class="btn ghost" style="padding:13px 22px">Cancelar</button></div>
+  </div>`);
+  app.appendChild(c);
+  document.getElementById('originId').value=editing.originId||"";
+  document.getElementById('destId').value=editing.destId||"";
+  setTimeout(()=>{ensureFormMap();sync();},80);
+
+  function renderCps(){
+    const box=document.getElementById('cpList');box.innerHTML='';
+    if(!editing.checkpoints.length)box.innerHTML='<div class="note" style="margin:6px 0">Sin checkpoints intermedios.</div>';
+    editing.checkpoints.forEach((cp,i)=>{
+      const r=el(`<div class="row"><span style="color:var(--amber);width:18px">${i+1}</span><span style="flex:1">${cp.name} <span style="color:var(--muted)">(${cp.lat.toFixed(3)}, ${cp.lon.toFixed(3)})</span></span><button class="x">×</button></div>`);
+      r.querySelector('.x').onclick=()=>{editing.checkpoints.splice(i,1);renderCps();sync();};
+      box.appendChild(r);
+    });
+  }
+  renderCps();
+  document.getElementById('cpAdd').onclick=()=>{const id=document.getElementById('cpSel').value;const p=pointById(id);if(!p)return;editing.checkpoints.push({id:p.id,name:p.name,lat:p.lat,lon:p.lon});document.getElementById('cpSel').value="";renderCps();sync();};
+  function sync(){
+    editing.originId=document.getElementById('originId').value;editing.destId=document.getElementById('destId').value;
+    editing.origin=pointById(editing.originId);editing.dest=pointById(editing.destId);
+    drawFormRoute(editing);
+  }
+  document.getElementById('originId').onchange=sync;document.getElementById('destId').onchange=sync;
+  document.getElementById('cancel').onclick=()=>{S.editingId=null;S.tab="vuelos";paint();};
+  document.getElementById('save').onclick=async()=>{
+    const g=id=>document.getElementById(id).value;
+    const ferr=m=>{const e=document.getElementById('formErr');e.textContent=m;e.classList.remove('hide');};
+    sync();
+    const matricula=g('matricula').toUpperCase().trim();
+    if(!matricula)return ferr("Indicá la matrícula.");
+    if(!editing.origin||!editing.dest)return ferr("Seleccioná origen y destino.");
+    const row={
+      matricula, fecha:g('fecha'),
+      horas:num(g('horas')), pic:num(g('pic')), dual:num(g('dual')), noche:num(g('noche')), ifr:num(g('ifr')), xc:num(g('xc')),
+      fuel:g('fuel')||null, carga:g('carga')||null,
+      aterrizajes:parseInt(g('ciclos'))||0, despegues:parseInt(g('ciclos'))||0,
+      notas:g('notas')||null,
+      origin:editing.origin, dest:editing.dest, checkpoints:editing.checkpoints||[]
+    };
+    const btn=document.getElementById('save');btn.disabled=true;btn.textContent="Guardando…";
+    try{
+      if(S.editingId){
+        const {data,error}=await sb.from('flights').update(row).eq('id',S.editingId).select().single();
+        if(error)throw error;
+        const i=S.flights.findIndex(x=>x.id===S.editingId);if(i>=0)S.flights[i]=mapFlightRow(data);
+      }else{
+        row.user_id=S.user.id;
+        const {data,error}=await sb.from('flights').insert(row).select().single();
+        if(error)throw error;
+        S.flights.unshift(mapFlightRow(data));
+      }
+      sortFlights();S.editingId=null;S.tab="vuelos";paint();
+    }catch(e){btn.disabled=false;btn.textContent="GUARDAR VUELO";ferr("No se pudo guardar: "+(e.message||e));}
+  };
+}
+
+/* =================== Vista: Mapa =================== */
+function parseCoord(s){
+  s=(s||'').trim();if(s==="")return NaN;
+  const dms=s.match(/(\d+(?:\.\d+)?)[^\d]+(\d+(?:\.\d+)?)[^\d]+(\d+(?:\.\d+)?)\s*([NSEWnsew]?)/);
+  if(dms){let v=parseFloat(dms[1])+parseFloat(dms[2])/60+parseFloat(dms[3])/3600;const h=(dms[4]||"").toUpperCase();if(h==="S"||h==="W")v=-v;return v;}
+  return parseFloat(s);
+}
+function viewMapa(app){
+  const c=el(`<div>
+    <h2>Mapa de Guatemala</h2>
+    <div class="maptools">
+      <button id="histBtn">Historial de rutas</button>
+      <button id="aspBtn">Espacios aéreos (AIP)</button>
+      <button id="centerBtn">Centrar Guatemala</button>
+    </div>
+    <div id="aspNote" class="note hide" style="margin:0 0 8px;color:var(--amber)">Aún no hay espacios aéreos oficiales (AIP) cargados en la base. Cuando los carguemos, se dibujarán aquí.</div>
+    <div class="mapwrap" id="mainmap"></div>
+    <div class="note" style="margin-top:10px"><span style="color:var(--amber)">●</span> internacional &nbsp; <span style="color:#56c7ff">●</span> nacional &nbsp; <span style="color:#5be584">●</span> Aeroclub &nbsp; <span style="color:#9fb3d1">●</span> waypoint. Capa <b>OpenAIP</b> activa por defecto; control arriba a la derecha para <b>satélite</b>.</div>
+
+    <div class="card" style="padding:14px;margin-top:14px">
+      <label>Waypoints</label>
+      <div class="note" style="margin-bottom:10px">Tocá un punto del mapa para tomar sus coordenadas, o escribilas a mano. Quedan guardados y disponibles como origen, destino o checkpoint al registrar vuelos.</div>
+      <div class="field"><input id="wpName" placeholder="Nombre (ej. Finca El Mango / WP ALFA)"></div>
+      <div class="grid2"><div class="field"><input id="wpLat" placeholder="Latitud (14.0153)"></div><div class="field"><input id="wpLon" placeholder="Longitud (-90.7731)"></div></div>
+      <div id="wpErr" class="err hide"></div>
+      <button id="wpAdd" class="btn" style="width:100%">Guardar waypoint</button>
+      <div class="note" style="margin-top:8px">También acepta grados: <code>14 00 55 N</code> y <code>90 46 23 W</code>.</div>
+      <div id="wpList" style="margin-top:12px"></div>
+    </div>
+  </div>`);
+  app.appendChild(c);
+
+  let pickMarker=null;
+  setTimeout(()=>{ensureMainMap();renderMainMarkers();
+    if(histOn){histOn=false;toggleHistory();}
+    if(aspOn){aspOn=false;toggleAirspaces();}
+    mainMap.off('click');
+    mainMap.on('click',e=>{
+      document.getElementById('wpLat').value=e.latlng.lat.toFixed(5);
+      document.getElementById('wpLon').value=e.latlng.lng.toFixed(5);
+      if(pickMarker)mainMap.removeLayer(pickMarker);
+      pickMarker=L.marker([e.latlng.lat,e.latlng.lng],{icon:dotIcon('#ffd166',7)}).addTo(mainMap);
+    });
+  },80);
+  document.getElementById('histBtn').onclick=toggleHistory;
+  document.getElementById('aspBtn').onclick=toggleAirspaces;
+  document.getElementById('centerBtn').onclick=()=>mainMap.setView([15.6,-90.3],7);
+
+  function listWp(){
+    const box=document.getElementById('wpList');box.innerHTML='';
+    if(!S.favs.length){box.innerHTML='<div class="note" style="text-align:center;padding:14px 0">Aún no hay waypoints.</div>';return;}
+    S.favs.forEach((f,i)=>{
+      const r=el(`<div class="row"><span style="color:var(--amber2)">★</span><div style="flex:1"><div style="color:var(--ink);font-weight:600">${f.name}</div><div style="color:var(--muted);font-size:12px">${f.lat.toFixed(4)}, ${f.lon.toFixed(4)}</div></div><button class="x">×</button></div>`);
+      r.querySelector('.x').onclick=async()=>{
+        const {error}=await sb.from('waypoints').delete().eq('id',f.id);
+        if(error)return alert("No se pudo eliminar: "+error.message);
+        S.favs.splice(i,1);renderMainMarkers();listWp();
+      };
+      box.appendChild(r);
+    });
+  }
+  listWp();
+  document.getElementById('wpAdd').onclick=async()=>{
+    const werr=m=>{const e=document.getElementById('wpErr');e.textContent=m;e.classList.remove('hide');};
+    const name=document.getElementById('wpName').value.trim();
+    const lat=parseCoord(document.getElementById('wpLat').value),lon=parseCoord(document.getElementById('wpLon').value);
+    if(!name||isNaN(lat)||isNaN(lon))return werr("Nombre, latitud y longitud válidos son obligatorios.");
+    const btn=document.getElementById('wpAdd');btn.disabled=true;btn.textContent="Guardando…";
+    const {data,error}=await sb.from('waypoints').insert({user_id:S.user.id,name,lat,lon}).select().single();
+    btn.disabled=false;btn.textContent="Guardar waypoint";
+    if(error)return werr("No se pudo guardar: "+error.message);
+    S.favs.push({id:data.id,name:data.name,lat:data.lat,lon:data.lon});
+    document.getElementById('wpName').value="";document.getElementById('wpLat').value="";document.getElementById('wpLon').value="";
+    document.getElementById('wpErr').classList.add('hide');
+    if(pickMarker){mainMap.removeLayer(pickMarker);pickMarker=null;}
+    renderMainMarkers();listWp();
+  };
+}
+
+
+/* =================== Vista: Estadísticas + respaldo =================== */
+function inMonth(d,now){return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();}
+function viewStats(app){
+  const now=new Date();
+  const six=new Date(now);six.setMonth(six.getMonth()-6);
+  const fl=S.flights.map(f=>({f,d:new Date(f.fecha+"T00:00:00")}));
+  const mes=totals(fl.filter(x=>inMonth(x.d,now)).map(x=>x.f));
+  const s6=totals(fl.filter(x=>x.d>=six).map(x=>x.f));
+  const anio=totals(fl.filter(x=>x.d.getFullYear()===now.getFullYear()).map(x=>x.f));
+  const tot=totals(S.flights);
+  const rows=[["Tiempo total","total"],["PIC","pic"],["Dual","dual"],["Nocturno","noche"],["IFR","ifr"],["Travesía (XC)","xc"]];
+  const c=el(`<div>
+    <h2>Estadísticas</h2>
+    <div class="card" style="padding:16px;margin-bottom:14px;text-align:center">
+      <div class="l">Tiempo total acumulado</div>
+      <div style="font-family:var(--disp);font-weight:700;font-size:40px;color:var(--amber);line-height:1.05">${fmt(tot.total)} <span style="font-size:20px;color:var(--muted)">h</span></div>
+      <div style="font-family:var(--mono);color:var(--cyan);margin-top:4px">= ${hm(tot.total)} (horas:minutos)</div>
+      <div class="note" style="margin-top:6px">${tot.vuelos} vuelos · ${tot.land} aterrizajes</div>
+    </div>
+    <div class="card" style="padding:14px;overflow-x:auto">
+      <table class="stats"><thead><tr><th>Categoría</th><th>Mes</th><th>6 meses</th><th>Año</th><th>Total</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td>${fmt(mes[r[1]])}</td><td>${fmt(s6[r[1]])}</td><td>${fmt(anio[r[1]])}</td><td style="color:var(--amber)">${fmt(tot[r[1]])}</td></tr>`).join("")}</tbody></table>
+      <div class="note" style="margin-top:10px">Horas en decimal. Total acumulado también en H:MM arriba.</div>
+    </div>
+    <div class="card" style="padding:14px;margin-top:14px">
+      <label>Respaldo de datos</label>
+      <div class="note" style="margin-bottom:10px">Tus vuelos viven en la nube con tu cuenta. Además podés exportar/importar un respaldo manual (.json). Importar <b>agrega</b> los vuelos del archivo a tu cuenta.</div>
+      <div style="display:flex;gap:10px"><button id="exp" class="btn cyan" style="flex:1;padding:10px 0">Exportar respaldo</button><label class="btn ghost" style="flex:1;padding:10px 0;text-align:center;margin:0">Importar<input id="imp" type="file" accept="application/json" style="display:none"></label></div>
+      <div id="impMsg" class="note" style="margin-top:8px"></div>
+    </div>
+  </div>`);
+  app.appendChild(c);
+  document.getElementById('exp').onclick=()=>{
+    const data=JSON.stringify({user:S.user?S.user.email:null,flights:S.flights,favs:S.favs,exportedAt:new Date().toISOString()},null,2);
+    const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='bitacora_'+(S.user?S.user.email:'datos')+'.json';a.click();URL.revokeObjectURL(url);
+  };
+  document.getElementById('imp').onchange=e=>{
+    const file=e.target.files[0];if(!file)return;const rd=new FileReader();
+    rd.onload=async()=>{
+      const msg=document.getElementById('impMsg');
+      try{
+        const j=JSON.parse(rd.result);
+        if(!Array.isArray(j.flights)&&!Array.isArray(j.favs))throw new Error("formato");
+        if(!confirm("Esto AGREGARÁ los vuelos y favoritos del respaldo a tu cuenta. ¿Continuar?"))return;
+        msg.textContent="Importando…";
+        // Favoritos
+        let favRows=(j.favs||[]).map(f=>({user_id:S.user.id,name:f.name,lat:Number(f.lat),lon:Number(f.lon)}))
+          .filter(f=>f.name&&!isNaN(f.lat)&&!isNaN(f.lon));
+        if(favRows.length){const {error}=await sb.from('waypoints').insert(favRows);if(error)throw error;}
+        // Vuelos — soporta formato nuevo (origin/dest objetos) y viejo (originId/destId)
+        const resolve=(p,id)=>{if(p&&p.lat!=null)return{id:p.id||id||null,name:p.name||id||'?',lat:Number(p.lat),lon:Number(p.lon)};const r=pointById(id);return r||null;};
+        let flightRows=(j.flights||[]).map(f=>({
+          user_id:S.user.id,
+          matricula:(f.matricula||'').toUpperCase()||null,
+          fecha:f.fecha||new Date().toISOString().slice(0,10),
+          horas:num(f.horas),pic:num(f.pic),dual:num(f.dual),noche:num(f.noche),ifr:num(f.ifr),xc:num(f.xc),
+          fuel:f.fuel||null,carga:f.carga||null,
+          aterrizajes:parseInt(f.aterrizajes)||0,despegues:parseInt(f.despegues)||0,
+          notas:f.notas||null,
+          origin:resolve(f.origin,f.originId),dest:resolve(f.dest,f.destId),
+          checkpoints:Array.isArray(f.checkpoints)?f.checkpoints:[]
+        }));
+        if(flightRows.length){const {error}=await sb.from('flights').insert(flightRows);if(error)throw error;}
+        await loadAll();paint();
+        alert("Respaldo importado: "+flightRows.length+" vuelos, "+favRows.length+" favoritos.");
+      }catch(err){msg.textContent="";alert("Archivo no válido o error al importar: "+(err.message||err));}
+    };
+    rd.readAsText(file);
+  };
+}
+
+/* =================== Vista: Clima =================== */
+const WX_AIRPORTS=["MGGT","MGMM","MGQZ"];
+async function wxFetch(type,ids){
+  try{
+    const {data,error}=await sb.functions.invoke('aviation',{body:{type,ids}});
+    if(error){
+      // intentar leer el cuerpo de error de la función
+      let detail="";try{detail=await error.context.text();}catch(_){}
+      return {ok:false,error:(detail||error.message||'Error de red')};
+    }
+    return data;
+  }catch(e){return {ok:false,error:String(e&&e.message||e)};}
+}
+function wxTimeLocal(iso){if(!iso)return"";try{return new Date(iso).toLocaleString('es-GT',{hour12:false});}catch(e){return iso;}}
+function viewClima(app){
+  const sel=WX_AIRPORTS.includes(S.climaIcao)?S.climaIcao:WX_AIRPORTS[0];
+  S.climaIcao=sel;
+  const nameOf=ic=>{const a=S.aeros.find(x=>x.icao===ic);return a?a.nombre:ic;};
+  const opts=WX_AIRPORTS.map(ic=>`<option value="${ic}"${ic===sel?' selected':''}>${ic} — ${nameOf(ic)}</option>`).join("");
+  const c=el(`<div>
+    <h2>Clima aeronáutico</h2>
+    <div class="field"><label>Aeródromo (ICAO)</label><select id="wxSel">${opts}</select></div>
+    <div class="note" style="margin-bottom:14px">Solo se listan los aeródromos de GT que publican METAR/TAF. Se actualiza automáticamente. Datos informativos vía aviationweather.gov — <b>no son la única fuente válida para planificar un vuelo</b>; verificá con el AIS/DGAC oficial.</div>
+
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <label style="margin-bottom:8px">METAR</label>
+      <div id="metarBox" style="font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink);word-break:break-word">Cargando…</div>
+      <div id="metarMeta" class="note" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <label style="margin-bottom:8px">TAF</label>
+      <div id="tafBox" style="font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink);word-break:break-word">Cargando…</div>
+      <div id="tafMeta" class="note" style="margin-top:6px"></div>
+      <div class="note" style="margin-top:2px">Actualización automática a las 00:00, 06:00, 12:00 y 18:00 UTC.</div>
+    </div>
+
+    <div class="card" style="padding:14px">
+      <label style="margin-bottom:8px">NOTAM</label>
+      <div id="notamBox" style="font-family:var(--mono);font-size:12.5px;line-height:1.55;color:var(--ink);word-break:break-word">Cargando…</div>
+      <div id="notamMeta" class="note" style="margin-top:6px"></div>
+    </div>
+  </div>`);
+  app.appendChild(c);
+
+  const box=id=>document.getElementById(id);
+  async function loadMetar(){
+    const b=box('metarBox');b.textContent="Cargando…";box('metarMeta').textContent="";
+    const r=await wxFetch('metar',S.climaIcao);
+    if(!r||!r.ok){b.innerHTML='<span style="color:var(--red)">'+((r&&r.error)||'No disponible')+'</span>';return;}
+    const arr=Array.isArray(r.data)?r.data:[];
+    if(!arr.length){b.innerHTML='<span style="color:var(--muted)">Sin METAR para '+S.climaIcao+' (puede no publicar).</span>';}
+    else{b.textContent=arr[0].rawOb||arr[0].rawMETAR||'—';box('metarMeta').textContent='Observado: '+wxTimeLocal(arr[0].reportTime||arr[0].obsTime)+' · consultado '+wxTimeLocal(r.fetchedAt);}
+  }
+  async function loadTaf(){
+    const b=box('tafBox');b.textContent="Cargando…";box('tafMeta').textContent="";
+    const r=await wxFetch('taf',S.climaIcao);
+    if(!r||!r.ok){b.innerHTML='<span style="color:var(--red)">'+((r&&r.error)||'No disponible')+'</span>';return;}
+    const arr=Array.isArray(r.data)?r.data:[];
+    if(!arr.length){b.innerHTML='<span style="color:var(--muted)">Sin TAF para '+S.climaIcao+'.</span>';}
+    else{b.textContent=arr[0].rawTAF||'—';box('tafMeta').textContent='Emitido: '+wxTimeLocal(arr[0].issueTime)+' · consultado '+wxTimeLocal(r.fetchedAt);}
+  }
+  async function loadNotam(){
+    const b=box('notamBox');b.textContent="Cargando…";box('notamMeta').textContent="";
+    const r=await wxFetch('notam',S.climaIcao);
+    if(!r){b.innerHTML='<span style="color:var(--red)">No disponible</span>';return;}
+    if(r.configured===false){
+      b.innerHTML='<span style="color:var(--amber)">'+(r.message||'NOTAM automático no configurado.')+'</span>';
+      box('notamMeta').innerHTML='Fuente oficial: <a href="'+(r.official||'https://www.notams.faa.gov/')+'" target="_blank" style="color:var(--cyan)">consultar NOTAMs</a>';
+      return;
+    }
+    if(!r.ok){b.innerHTML='<span style="color:var(--red)">'+(r.error||'No disponible')+'</span>';return;}
+    const items=(r.data&&(r.data.items||r.data))||[];
+    const texts=(Array.isArray(items)?items:[]).map(it=>{
+      try{return it.properties.coreNOTAMData.notam.text||it.properties.coreNOTAMData.notam.icaoMessage;}catch(e){return null;}
+    }).filter(Boolean);
+    if(!texts.length){b.innerHTML='<span style="color:var(--muted)">Sin NOTAMs para '+S.climaIcao+' (o sin cobertura).</span>';}
+    else{b.innerHTML=texts.map(t=>'<div style="padding:8px 0;border-bottom:1px solid var(--line)">'+(t+'').replace(/</g,'&lt;')+'</div>').join('');}
+    box('notamMeta').textContent='Consultado '+wxTimeLocal(r.fetchedAt);
+  }
+
+  box('wxSel').onchange=e=>{S.climaIcao=e.target.value;loadMetar();loadTaf();loadNotam();};
+
+  loadMetar();loadTaf();loadNotam();
+  // Auto-actualización: METAR cada hora; NOTAM cada 15 min; TAF a las 00/06/12/18 UTC
+  window.wxTimers.push(setInterval(loadMetar,3600000));
+  window.wxTimers.push(setInterval(loadNotam,900000));
+  (function scheduleTaf(){
+    const now=new Date();
+    const next=new Date(now);next.setUTCMinutes(0,0,0);
+    next.setUTCHours((Math.floor(now.getUTCHours()/6)+1)*6); // próxima hora múltiplo de 6 UTC
+    window.wxTimers.push(setTimeout(function(){
+      loadTaf();
+      window.wxTimers.push(setInterval(loadTaf,6*3600000)); // luego cada 6 h, alineado
+    }, next-now));
+  })();
+}
+
+/* =================== Vista: Perfil =================== */
+function medStatus(expiry){
+  if(!expiry)return{label:'Sin certificado registrado',color:'var(--muted)'};
+  const today=new Date();today.setHours(0,0,0,0);
+  const exp=new Date(expiry+'T00:00:00');
+  const days=Math.round((exp-today)/86400000);
+  if(days<0)return{label:'Vencido hace '+(-days)+' día'+((-days)===1?'':'s'),color:'var(--red)'};
+  if(days===0)return{label:'Vence hoy',color:'var(--red)'};
+  if(days<=30)return{label:'Por vencer · '+days+' día'+(days===1?'':'s'),color:'var(--amber)'};
+  return{label:'Vigente · '+days+' días restantes',color:'var(--grn)'};
+}
+function viewPerfil(app){
+  const p=S.profile||{};
+  const q=s=>(s==null?'':String(s)).replace(/"/g,'&quot;');
+  const st=medStatus(p.medical_expiry);
+  const c=el(`<div>
+    <h2>Perfil del piloto</h2>
+    <div class="card" style="padding:16px;margin-bottom:14px">
+      <label style="margin-bottom:10px">Datos personales</label>
+      <div class="field"><label>Nombre completo</label><input id="p_name" value="${q(p.display_name)}"></div>
+      <div class="field"><label>Número de licencia</label><input id="p_lic" value="${q(p.license)}"></div>
+      <div class="field"><label>Fecha de nacimiento</label><input id="p_bd" type="date" value="${p.birthdate||''}"></div>
+      <div class="field"><label>Correo</label><input value="${q(S.user?S.user.email:'')}" disabled style="opacity:.6"></div>
+      <div id="pErr" class="err hide"></div>
+      <button id="pSave" class="btn" style="width:100%">Guardar datos</button>
+    </div>
+    <div class="card" style="padding:16px">
+      <label style="margin-bottom:4px">Certificado médico</label>
+      <div class="note" style="margin-bottom:12px">Opcional. No se pide al crear la cuenta; podés cargarlo cuando quieras y la app te avisa la vigencia.</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+        <span style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${st.color};box-shadow:0 0 8px ${st.color}"></span>
+        <span style="font-family:var(--mono);font-size:13px;color:${st.color}">${st.label}</span>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Clase</label><select id="m_class"><option value="">—</option><option value="1">Clase 1</option><option value="2">Clase 2</option><option value="3">Clase 3</option></select></div>
+        <div class="field"><label>Número</label><input id="m_num" value="${q(p.medical_number)}"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Emisión</label><input id="m_iss" type="date" value="${p.medical_issued||''}"></div>
+        <div class="field"><label>Vencimiento</label><input id="m_exp" type="date" value="${p.medical_expiry||''}"></div>
+      </div>
+      <div id="mErr" class="err hide"></div>
+      <button id="mSave" class="btn cyan" style="width:100%">Guardar certificado médico</button>
+    </div>
+  </div>`);
+  app.appendChild(c);
+  document.getElementById('m_class').value=p.medical_class||'';
+
+  async function saveProfile(patch,btnId,errId){
+    const btn=document.getElementById(btnId),t=btn.textContent;
+    btn.disabled=true;btn.textContent="Guardando…";
+    try{
+      const {data,error}=await sb.from('profiles').upsert(Object.assign({id:S.user.id},patch)).select().single();
+      if(error)throw error;
+      S.profile=data;
+      const who=document.getElementById('who');if(who)who.textContent=(data.display_name||S.user.email);
+      paint();
+    }catch(e){
+      btn.disabled=false;btn.textContent=t;
+      const el2=document.getElementById(errId);el2.textContent="No se pudo guardar: "+(e.message||e);el2.classList.remove('hide');
+    }
+  }
+  document.getElementById('pSave').onclick=()=>{
+    const name=document.getElementById('p_name').value.trim();
+    if(!name){const e=document.getElementById('pErr');e.textContent="El nombre no puede quedar vacío.";e.classList.remove('hide');return;}
+    saveProfile({display_name:name,license:document.getElementById('p_lic').value.trim()||null,birthdate:document.getElementById('p_bd').value||null},'pSave','pErr');
+  };
+  document.getElementById('mSave').onclick=()=>{
+    saveProfile({
+      medical_class:document.getElementById('m_class').value||null,
+      medical_number:document.getElementById('m_num').value.trim()||null,
+      medical_issued:document.getElementById('m_iss').value||null,
+      medical_expiry:document.getElementById('m_exp').value||null
+    },'mSave','mErr');
+  };
+}
+
+/* =================== Arranque =================== */
+async function boot(){
+  root().innerHTML='<div class="spin"></div>';
+  const {data}=await sb.auth.getSession();
+  if(data&&data.session){
+    S.user=data.session.user;S.tab="vuelos";S.editingId=null;
+    await loadAll();renderApp();
+  }else{
+    renderAuth();
+  }
+}
+sb.auth.onAuthStateChange((event)=>{
+  if(event==='SIGNED_OUT'){S.user=null;mainMap=null;formMap=null;renderAuth();}
+});
+boot();
+</script>
+</body>
+</html>
