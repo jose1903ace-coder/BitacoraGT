@@ -75,7 +75,16 @@ header{position:sticky;top:0;z-index:50;background:rgba(250,248,244,.92);backdro
 .cat p{font-size:13.5px;color:var(--muted)}
 
 /* listings */
-.filters{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:40px}
+.filters{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
+.searchbar{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;max-width:760px;margin:0 auto 10px}
+.searchbar .q{flex:1;min-width:240px;position:relative}
+.searchbar .q svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.searchbar .q input{padding-left:40px}
+.price-range{display:flex;align-items:center;gap:8px}
+.price-range input{width:130px}
+.price-range span{color:var(--muted)}
+.result-count{text-align:center;font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:28px;min-height:16px}
+.result-count a{color:var(--gold-dark);border-bottom:1px solid var(--gold-dark);cursor:pointer}
 .chip{border:1px solid var(--line);background:var(--panel);padding:9px 20px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-radius:30px;transition:all .2s}
 .chip:hover{border-color:var(--gold);color:var(--ink)}
 .chip.active{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -305,6 +314,18 @@ textarea{resize:vertical;min-height:90px}
         <button class="chip" data-cat="photo" onclick="filterCat('photo')">Fotógrafos</button>
         <button class="chip" data-cat="furniture" onclick="filterCat('furniture')">Mobiliario</button>
       </div>
+      <div class="searchbar">
+        <div class="q">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input id="q" placeholder="Buscar por nombre o ubicación…" oninput="searchChanged()">
+        </div>
+        <div class="price-range">
+          <input type="number" id="pMin" placeholder="Precio mín. Q" min="0" oninput="searchChanged()">
+          <span>—</span>
+          <input type="number" id="pMax" placeholder="Precio máx. Q" min="0" oninput="searchChanged()">
+        </div>
+      </div>
+      <div class="result-count" id="resultCount"></div>
       <div class="cards" id="cards">
         <div class="empty"><div class="serif">Cargando proveedores…</div></div>
       </div>
@@ -710,20 +731,67 @@ async function loadListings(){
   renderCards();
 }
 
+const CHIP_LABEL = { all:'Todos', venue:'Venues', planner:'Wedding Planners', florist:'Floristerías', photo:'Fotógrafos', furniture:'Mobiliario' };
+let searchQ = '', priceMin = null, priceMax = null, shownCount = 30, searchTimer = null;
+const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+function searchChanged(){
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=>{
+    searchQ = $('q').value.trim();
+    priceMin = $('pMin').value !== '' ? Number($('pMin').value) : null;
+    priceMax = $('pMax').value !== '' ? Number($('pMax').value) : null;
+    shownCount = 30;
+    renderCards();
+  }, 250);
+}
+
+function clearFilters(){
+  $('q').value=''; $('pMin').value=''; $('pMax').value='';
+  searchQ=''; priceMin=null; priceMax=null; shownCount=30;
+  renderCards();
+}
+
 function filterCat(cat){
   curCat = cat;
+  shownCount = 30;
   document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active', c.dataset.cat===cat));
   renderCards();
   document.getElementById('catalogo')?.scrollIntoView({behavior:'smooth'});
 }
 
+function filteredListings(){
+  let items = curCat==='all' ? allListings : allListings.filter(l=>l.category===curCat);
+  if(searchQ){
+    const q = norm(searchQ);
+    items = items.filter(l => norm(l.title).includes(q) || norm(l.location).includes(q));
+  }
+  if(priceMin!=null) items = items.filter(l => l.price_from!=null && l.price_from >= priceMin);
+  if(priceMax!=null) items = items.filter(l => l.price_from!=null && l.price_from <= priceMax);
+  return items;
+}
+
 function renderCards(){
-  const items = curCat==='all' ? allListings : allListings.filter(l=>l.category===curCat);
+  // contadores por categoría (sobre el total publicado)
+  document.querySelectorAll('.chip').forEach(c=>{
+    const k = c.dataset.cat;
+    const n = k==='all' ? allListings.length : allListings.filter(l=>l.category===k).length;
+    c.textContent = CHIP_LABEL[k] + (n ? ` (${n})` : '');
+  });
+  const items = filteredListings();
+  const filtering = searchQ || priceMin!=null || priceMax!=null;
+  $('resultCount').innerHTML = items.length
+    ? (items.length===1 ? '1 proveedor' : items.length+' proveedores') + (filtering ? ' · <a onclick="clearFilters()">limpiar filtros</a>' : '')
+    : '';
   if(!items.length){
-    $('cards').innerHTML = `<div class="empty"><div class="serif">Aún no hay anuncios en esta categoría</div><p>¿Ofreces este servicio? <a style="color:var(--gold-dark);border-bottom:1px solid var(--gold-dark);cursor:pointer" onclick="openAuth('signup','provider')">Publica tu anuncio</a>.</p></div>`;
+    $('cards').innerHTML = filtering
+      ? `<div class="empty"><div class="serif">No encontramos proveedores con esos filtros</div><p>Prueba con otra búsqueda o <a style="color:var(--gold-dark);border-bottom:1px solid var(--gold-dark);cursor:pointer" onclick="clearFilters()">limpia los filtros</a>.</p></div>`
+      : `<div class="empty"><div class="serif">Aún no hay anuncios en esta categoría</div><p>¿Ofreces este servicio? <a style="color:var(--gold-dark);border-bottom:1px solid var(--gold-dark);cursor:pointer" onclick="openAuth('signup','provider')">Publica tu anuncio</a>.</p></div>`;
     return;
   }
-  $('cards').innerHTML = items.map(l=>`
+  const page = items.slice(0, shownCount);
+  const more = items.length - page.length;
+  $('cards').innerHTML = page.map(l=>`
     <div class="card">
       <div class="card-img">
         ${l.image_url ? `<img src="${esc(l.image_url)}" alt="" onerror="this.outerHTML='<div class=ph>${esc((l.title||'W')[0])}</div>'">` : `<div class="ph">${esc((l.title||'W')[0])}</div>`}
@@ -739,7 +807,10 @@ function renderCards(){
           <button class="btn sm gold" onclick="openDetail('${l.id}')">Ver</button>
         </div>
       </div>
-    </div>`).join('');
+    </div>`).join('') + (more>0?`
+    <div class="empty" style="padding:26px 20px">
+      <button class="btn ghost" onclick="shownCount+=30;renderCards()">Mostrar más (${more} restantes)</button>
+    </div>`:'');
 }
 
 /* ================= DETAIL + BOOKING ================= */
