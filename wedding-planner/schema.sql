@@ -1,7 +1,7 @@
 -- Wedding Planner · Esquema de base de datos (Supabase)
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
 --   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
---   wp_add_photo_category, wp_provider_plans)
+--   wp_add_photo_category, wp_provider_plans, wp_admin_set_plan_rpc)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -126,6 +126,41 @@ drop trigger if exists wp_protect_plan on public.wp_profiles;
 create trigger wp_protect_plan
   before update on public.wp_profiles
   for each row execute function public.wp_protect_plan_columns();
+
+-- RPC de administración (la llama la edge function wp-admin-plan con
+-- service_role): activa/desactiva el plan Destacado por correo del proveedor
+create or replace function public.wp_admin_set_plan(p_email text, p_days int)
+returns jsonb
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  uid uuid;
+  nombre text;
+  vence timestamptz;
+begin
+  select id into uid from auth.users where lower(email) = lower(p_email);
+  if uid is null then
+    return jsonb_build_object('ok', false, 'error', 'no_user');
+  end if;
+  if p_days is null or p_days <= 0 then
+    update public.wp_profiles set plan = 'free', plan_expires_at = null
+    where id = uid returning full_name into nombre;
+  else
+    vence := now() + make_interval(days => p_days);
+    update public.wp_profiles set plan = 'premium', plan_expires_at = vence
+    where id = uid returning full_name into nombre;
+  end if;
+  if nombre is null then
+    return jsonb_build_object('ok', false, 'error', 'no_profile');
+  end if;
+  return jsonb_build_object('ok', true, 'name', nombre,
+    'plan', case when coalesce(p_days,0) > 0 then 'premium' else 'free' end,
+    'expires', vence);
+end;
+$$;
+
+revoke execute on function public.wp_admin_set_plan(text, int) from public, anon, authenticated;
 
 -- Seguridad a nivel de fila (RLS)
 alter table public.wp_profiles enable row level security;

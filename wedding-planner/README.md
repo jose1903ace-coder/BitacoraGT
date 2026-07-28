@@ -29,7 +29,15 @@ Pages, Netlify, etc. El backend (cuentas, anuncios y reservas) es Supabase.
 
 ### Activar el plan Destacado a un proveedor (tras recibir el pago)
 
-En el panel de Supabase → SQL Editor, ejecuta (cambia el correo):
+**Con un clic:** el correo que envía el proveedor con "Quiero destacar" incluye
+un enlace de activación (`…/wedding-planner/?activar=correo@proveedor.com`).
+Al abrirlo, entra con la cuenta de administrador (`jose1903ace@gmail.com`) y
+elige la duración: 1, 3 o 12 meses, o "Quitar Destacado". La activación la
+ejecuta la edge function `wp-admin-plan`, que verifica que quien la llama sea
+el administrador y luego corre `wp_admin_set_plan` con permisos de servidor.
+
+También puedes abrir ese enlace tú mismo en cualquier momento cambiando el
+correo, o usar el SQL Editor de Supabase:
 
 ```sql
 update public.wp_profiles
@@ -37,8 +45,8 @@ set plan = 'premium', plan_expires_at = now() + interval '30 days'
 where id = (select id from auth.users where email = 'correo@delproveedor.com');
 ```
 
-Para renovar, vuelve a ejecutar lo mismo; para cancelar, pon `plan = 'free'`.
-Los usuarios no pueden cambiarse el plan a sí mismos (trigger `wp_protect_plan`).
+Los usuarios no pueden cambiarse el plan a sí mismos (trigger `wp_protect_plan`
++ RPC restringida a service_role).
 
 Para cambiar el precio mostrado en la página, edita `PLAN_PRICE` y la sección
 "Planes" en `index.html`. El correo de contacto está en `CONTACT_EMAIL`.

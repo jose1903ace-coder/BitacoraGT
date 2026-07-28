@@ -437,6 +437,22 @@ textarea{resize:vertical;min-height:90px}
   </div>
 </footer>
 
+<!-- ============ ADMIN PLAN MODAL ============ -->
+<div class="overlay hidden" id="adminOverlay">
+  <div class="modal">
+    <button class="x" onclick="closeAdmin()">×</button>
+    <h2>Activar plan Destacado</h2>
+    <p class="sub">Proveedor: <strong id="admEmail"></strong></p>
+    <div id="admMsg"></div>
+    <div style="display:grid;gap:10px">
+      <button class="btn gold" onclick="adminSetPlan(30)">Activar 1 mes (30 días)</button>
+      <button class="btn gold" onclick="adminSetPlan(90)">Activar 3 meses (90 días)</button>
+      <button class="btn gold" onclick="adminSetPlan(365)">Activar 12 meses (365 días)</button>
+      <button class="btn danger" onclick="adminSetPlan(0)">Quitar Destacado (volver a Gratis)</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ AUTH MODAL ============ -->
 <div class="overlay hidden" id="authOverlay">
   <div class="modal">
@@ -545,6 +561,7 @@ const CATS = {
 const STATUS = { pending:"Pendiente", accepted:"Aceptada", declined:"Declinada", cancelled:"Cancelada" };
 const PLAN_PRICE = "Q 299/mes";
 const CONTACT_EMAIL = "jose1903ace@gmail.com";
+const ADMIN_EMAIL = "jose1903ace@gmail.com";
 const isPremiumProfile = p => !!p && p.plan==='premium' && (!p.plan_expires_at || new Date(p.plan_expires_at) > new Date());
 
 let session = null, profile = null;
@@ -776,11 +793,67 @@ function upgradePlan(){
   if(!session || !profile){ openAuth('signup','provider'); return; }
   if(profile.role!=='provider'){ toast('El plan Destacado es para cuentas de proveedor.'); return; }
   if(isPremiumProfile(profile)){ toast('Ya tienes el plan Destacado activo.'); return; }
+  const activarLink = location.origin + location.pathname + '?activar=' + encodeURIComponent(session.user.email);
   const subject = encodeURIComponent('Quiero el plan Destacado — Wedding Planner');
   const body = encodeURIComponent(
     `Hola, quiero activar el plan Destacado (${PLAN_PRICE}) para mi negocio.\n\n`+
-    `Negocio: ${profile.full_name}\nCorreo de mi cuenta: ${session.user.email}\nTeléfono: ${profile.phone||''}`);
+    `Negocio: ${profile.full_name}\nCorreo de mi cuenta: ${session.user.email}\nTeléfono: ${profile.phone||''}\n\n`+
+    `— Botón de activación (solo funciona para el administrador):\n${activarLink}`);
   location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+}
+
+/* ---- admin: activar plan desde el enlace del correo ---- */
+let pendingActivation = null;
+
+function checkActivationParam(){
+  const email = new URLSearchParams(location.search).get('activar');
+  if(!email) return;
+  pendingActivation = email;
+  history.replaceState(null, '', location.pathname);
+  tryOpenAdmin();
+}
+
+function tryOpenAdmin(){
+  if(!pendingActivation) return;
+  if(!session){
+    openAuth('login');
+    msg('authMsg', 'Entra con tu cuenta de administrador para activar el plan Destacado de: ' + pendingActivation, true);
+    return;
+  }
+  if((session.user.email||'').toLowerCase() !== ADMIN_EMAIL.toLowerCase()){
+    toast('Solo el administrador puede activar planes.');
+    pendingActivation = null;
+    return;
+  }
+  closeAuth();
+  $('admEmail').textContent = pendingActivation;
+  msg('admMsg','');
+  $('adminOverlay').classList.remove('hidden');
+}
+
+function closeAdmin(){ $('adminOverlay').classList.add('hidden'); pendingActivation = null; }
+
+async function adminSetPlan(days){
+  msg('admMsg','');
+  const email = $('admEmail').textContent;
+  const { data, error } = await sb.functions.invoke('wp-admin-plan', { body: { email, days } });
+  if(error || !data || data.ok === false){
+    const code = data?.error || error?.message || 'error';
+    msg('admMsg', code==='no_user' ? 'No existe ninguna cuenta con ese correo.'
+      : code==='no_profile' ? 'Esa cuenta no tiene perfil en la app.'
+      : code==='not_admin' ? 'Solo el administrador puede activar planes.'
+      : 'No se pudo actualizar: '+code);
+    return;
+  }
+  closeAdmin();
+  if(data.plan === 'premium'){
+    const hasta = data.expires ? new Date(data.expires).toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'}) : '';
+    toast(`★ Plan Destacado activado para ${data.name} hasta el ${hasta}`);
+  } else {
+    toast(`${data.name} volvió al plan Gratis.`);
+  }
+  loadListings();
+  if(profile && session && !$('viewDash').classList.contains('hidden')) renderDash();
 }
 
 function provTab(t){
@@ -938,6 +1011,7 @@ sb.auth.onAuthStateChange(async (_e, s) => {
   await loadProfile();
   paintAuthUI();
   if(session && !$('viewDash').classList.contains('hidden')) renderDash();
+  if(session && pendingActivation) tryOpenAdmin();
 });
 
 (async function init(){
@@ -946,6 +1020,7 @@ sb.auth.onAuthStateChange(async (_e, s) => {
   await loadProfile();
   paintAuthUI();
   loadListings();
+  checkActivationParam();
 })();
 </script>
 </body>
