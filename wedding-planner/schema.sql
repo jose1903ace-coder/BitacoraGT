@@ -1,6 +1,7 @@
 -- Wedding Planner · Esquema de base de datos (Supabase)
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
---   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue)
+--   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
+--   wp_add_photo_category)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -14,7 +15,7 @@ create table if not exists public.wp_profiles (
 create table if not exists public.wp_listings (
   id uuid primary key default gen_random_uuid(),
   provider_id uuid not null references public.wp_profiles(id) on delete cascade,
-  category text not null check (category in ('venue','planner','florist','furniture')),
+  category text not null check (category in ('venue','planner','florist','photo','furniture')),
   title text not null,
   description text,
   location text,

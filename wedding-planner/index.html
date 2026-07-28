@@ -65,8 +65,8 @@ header{position:sticky;top:0;z-index:50;background:rgba(250,248,244,.92);backdro
 .section-head p{color:var(--muted);max-width:520px;margin:0 auto}
 
 /* categories */
-.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-.cat{background:var(--panel);border:1px solid var(--line);padding:40px 26px;text-align:center;cursor:pointer;transition:all .3s;border-radius:2px}
+.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+.cat{background:var(--panel);border:1px solid var(--line);padding:36px 18px;text-align:center;cursor:pointer;transition:all .3s;border-radius:2px}
 .cat:hover{border-color:var(--gold);box-shadow:var(--shadow);transform:translateY(-3px)}
 .cat .glyph{font-family:var(--disp);font-size:30px;color:var(--gold);width:58px;height:58px;border:1px solid var(--gold-soft);background:var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
 .cat h3{font-size:21px;margin-bottom:8px}
@@ -213,10 +213,10 @@ textarea{resize:vertical;min-height:90px}
 <main id="viewHome">
   <section class="hero">
     <div class="wrap">
-      <div class="eyebrow">Venues · Wedding Planners · Floristerías · Mobiliario</div>
+      <div class="eyebrow">Venues · Wedding Planners · Floristerías · Fotógrafos · Mobiliario</div>
       <h1>La boda de tus sueños, <em>organizada con calma</em></h1>
       <div class="hero-rule"></div>
-      <p>Reserva el venue, contrata a tu wedding planner, elige la floristería y renta el mobiliario perfecto. Todo en un solo lugar, con elegancia y sin complicaciones.</p>
+      <p>Reserva el venue, contrata a tu wedding planner, elige la floristería, encuentra a tu fotógrafo y renta el mobiliario perfecto. Todo en un solo lugar, con elegancia y sin complicaciones.</p>
       <div class="hero-actions">
         <button class="btn gold" onclick="openAuth('signup','client')">Organiza tu boda</button>
         <button class="btn ghost" onclick="openAuth('signup','provider')">Anuncia tu servicio</button>
@@ -246,6 +246,11 @@ textarea{resize:vertical;min-height:90px}
           <h3>Floristerías</h3>
           <p>Ramos, centros de mesa y decoración floral a tu estilo.</p>
         </div>
+        <div class="cat" onclick="filterCat('photo')">
+          <div class="glyph">Ft</div>
+          <h3>Fotógrafos</h3>
+          <p>Captura cada momento con fotógrafos y videógrafos profesionales.</p>
+        </div>
         <div class="cat" onclick="filterCat('furniture')">
           <div class="glyph">M</div>
           <h3>Mobiliario</h3>
@@ -266,6 +271,7 @@ textarea{resize:vertical;min-height:90px}
         <button class="chip" data-cat="venue" onclick="filterCat('venue')">Venues</button>
         <button class="chip" data-cat="planner" onclick="filterCat('planner')">Wedding Planners</button>
         <button class="chip" data-cat="florist" onclick="filterCat('florist')">Floristerías</button>
+        <button class="chip" data-cat="photo" onclick="filterCat('photo')">Fotógrafos</button>
         <button class="chip" data-cat="furniture" onclick="filterCat('furniture')">Mobiliario</button>
       </div>
       <div class="cards" id="cards">
@@ -306,7 +312,7 @@ textarea{resize:vertical;min-height:90px}
         <p>Crea tu cuenta de pareja y gestiona todas tus reservas y solicitudes desde un solo panel.</p>
         <ul>
           <li>Reserva el venue para tu ceremonia y recepción</li>
-          <li>Contrata wedding planners y floristerías</li>
+          <li>Contrata wedding planners, floristerías y fotógrafos</li>
           <li>Renta mobiliario para tu recepción</li>
           <li>Da seguimiento a cada solicitud</li>
         </ul>
@@ -314,7 +320,7 @@ textarea{resize:vertical;min-height:90px}
       </div>
       <div>
         <h2>¿Ofreces <em>servicios</em> de boda?</h2>
-        <p>Publica tu venue, servicio de wedding planner, floristería o renta de mobiliario y recibe solicitudes directas.</p>
+        <p>Publica tu venue, servicio de wedding planner, floristería, fotografía o renta de mobiliario y recibe solicitudes directas.</p>
         <ul>
           <li>Publica anuncios con fotos y precios</li>
           <li>Recibe solicitudes de parejas interesadas</li>
@@ -395,7 +401,7 @@ textarea{resize:vertical;min-height:90px}
         </div>
         <div class="role" id="roleProvider" onclick="pickRole('provider')">
           <span class="serif">Proveedor</span>
-          <span>Anunciar venue, planner, flores o mobiliario</span>
+          <span>Anunciar venue, planner, flores, fotos o mobiliario</span>
         </div>
       </div>
       <div class="field"><label id="nameLabel">Nombre completo</label><input id="suName" placeholder="Ej. María y José / Venue Casa Blanca"></div>
@@ -420,6 +426,7 @@ textarea{resize:vertical;min-height:90px}
         <option value="venue">Venue</option>
         <option value="planner">Wedding Planner</option>
         <option value="florist">Floristería</option>
+        <option value="photo">Fotógrafo</option>
         <option value="furniture">Renta de mobiliario</option>
       </select>
     </div>
@@ -472,7 +479,7 @@ const SUPABASE_KEY = "sb_publishable_CSElvPJazzOG-GPQAYCpOQ_mFWU0MP6";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const CATS = {
-  venue:"Venue", planner:"Wedding Planner", florist:"Floristería", furniture:"Mobiliario"
+  venue:"Venue", planner:"Wedding Planner", florist:"Floristería", photo:"Fotógrafo", furniture:"Mobiliario"
 };
 const STATUS = { pending:"Pendiente", accepted:"Aceptada", declined:"Declinada", cancelled:"Cancelada" };
 
