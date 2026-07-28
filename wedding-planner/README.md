@@ -12,8 +12,8 @@ Pages, Netlify, etc. El backend (cuentas, anuncios y reservas) es Supabase.
 ## Dos tipos de cuenta
 
 - **Pareja (cliente):** explora el catálogo, envía solicitudes de reserva con
-  fecha e invitados, y da seguimiento desde su panel. Al ser aceptada una
-  solicitud, ve el contacto del proveedor.
+  fecha e invitados, y da seguimiento desde su panel, donde ve el nombre,
+  teléfono y correo del proveedor de cada solicitud.
 - **Proveedor:** publica anuncios (venue, wedding planner, floristería,
   fotógrafo o mobiliario) con descripción, ubicación, precio y foto — la foto
   se elige de la galería o cámara y se sube a Supabase Storage (bucket
@@ -53,6 +53,24 @@ Los usuarios no pueden cambiarse el plan a sí mismos (trigger `wp_protect_plan`
 
 Para cambiar el precio mostrado en la página, edita `PLAN_PRICE` y la sección
 "Planes" en `index.html`. El correo de contacto está en `CONTACT_EMAIL`.
+
+## Notificaciones por correo al proveedor
+
+Cuando una pareja envía una solicitud, la app llama a la edge function
+`wp-notify-booking`, que envía un correo al proveedor con los datos de la
+pareja (nombre, fecha, invitados, teléfono, correo y mensaje) y un botón para
+abrir su panel. El envío usa la API de [Brevo](https://www.brevo.com) (gratis
+hasta 300 correos/día). Para activarlo (una sola vez):
+
+1. Crea una cuenta gratis en brevo.com y verifica el remitente
+   `jose1903ace@gmail.com` (Settings → Senders → Add sender; te llega un
+   correo de confirmación).
+2. Copia tu clave: Settings → SMTP & API → API Keys → Generate a new API key.
+3. En Supabase → Project Settings → Edge Functions → Secrets, agrega
+   `BREVO_API_KEY` con esa clave.
+
+Sin la clave, la app funciona igual (la solicitud se registra y se ve en el
+panel); simplemente no se envía el correo.
 
 ## Backend (Supabase)
 

@@ -2,7 +2,7 @@
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
 --   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
 --   wp_add_photo_category, wp_provider_plans, wp_admin_set_plan_rpc,
---   wp_images_bucket)
+--   wp_images_bucket, wp_profile_email)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -10,6 +10,7 @@ create table if not exists public.wp_profiles (
   role text not null check (role in ('provider','client')),
   full_name text not null,
   phone text,
+  email text,
   plan text not null default 'free' check (plan in ('free','premium')),
   plan_expires_at timestamptz,
   created_at timestamptz not null default now()
@@ -52,12 +53,13 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.wp_profiles (id, role, full_name, phone)
+  insert into public.wp_profiles (id, role, full_name, phone, email)
   values (
     new.id,
     case when new.raw_user_meta_data->>'role' = 'provider' then 'provider' else 'client' end,
     coalesce(nullif(new.raw_user_meta_data->>'full_name',''), new.email),
-    nullif(new.raw_user_meta_data->>'phone','')
+    nullif(new.raw_user_meta_data->>'phone',''),
+    new.email
   )
   on conflict (id) do nothing;
   return new;
