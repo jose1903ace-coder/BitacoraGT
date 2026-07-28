@@ -2,7 +2,7 @@
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
 --   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
 --   wp_add_photo_category, wp_provider_plans, wp_admin_set_plan_rpc,
---   wp_images_bucket, wp_profile_email)
+--   wp_images_bucket, wp_profile_email, wp_reviews)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -198,6 +198,39 @@ create policy "wp_bookings_update_parties" on public.wp_bookings for update
     auth.uid() = client_id
     or exists (select 1 from public.wp_listings l where l.id = listing_id and l.provider_id = auth.uid())
   );
+
+-- Reseñas: 1-5 estrellas + comentario corto. Solo parejas con una solicitud
+-- aceptada en ese anuncio; una reseña por pareja por anuncio.
+create table if not exists public.wp_reviews (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references public.wp_listings(id) on delete cascade,
+  client_id uuid not null references public.wp_profiles(id) on delete cascade,
+  rating int not null check (rating between 1 and 5),
+  comment text check (comment is null or char_length(comment) <= 300),
+  created_at timestamptz not null default now(),
+  unique (listing_id, client_id)
+);
+
+create index if not exists wp_reviews_listing_idx on public.wp_reviews(listing_id);
+
+alter table public.wp_reviews enable row level security;
+
+create policy "wp_reviews_select" on public.wp_reviews for select using (true);
+create policy "wp_reviews_insert_client" on public.wp_reviews for insert
+  with check (
+    auth.uid() = client_id
+    and exists (
+      select 1 from public.wp_bookings b
+      where b.listing_id = wp_reviews.listing_id
+        and b.client_id = auth.uid()
+        and b.status = 'accepted'
+    )
+  );
+create policy "wp_reviews_update_own" on public.wp_reviews for update
+  using (auth.uid() = client_id)
+  with check (auth.uid() = client_id);
+create policy "wp_reviews_delete_own" on public.wp_reviews for delete
+  using (auth.uid() = client_id);
 
 -- Fotos de anuncios: bucket público 'wp-images' (máx 5 MB, solo imágenes).
 -- Cada usuario sube a su carpeta (auth.uid()); lectura pública; borra el dueño.
