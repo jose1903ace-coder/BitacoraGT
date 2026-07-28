@@ -60,17 +60,18 @@ Cuando una pareja envía una solicitud, la app llama a la edge function
 `wp-notify-booking`, que envía un correo al proveedor con los datos de la
 pareja (nombre, fecha, invitados, teléfono, correo y mensaje) y un botón para
 abrir su panel. El envío usa la API de [Brevo](https://www.brevo.com) (gratis
-hasta 300 correos/día). Para activarlo (una sola vez):
+hasta 300 correos/día), con remitente verificado `jose1903ace@gmail.com`.
 
-1. Crea una cuenta gratis en brevo.com y verifica el remitente
-   `jose1903ace@gmail.com` (Settings → Senders → Add sender; te llega un
-   correo de confirmación).
-2. Copia tu clave: Settings → SMTP & API → API Keys → Generate a new API key.
-3. En Supabase → Project Settings → Edge Functions → Secrets, agrega
-   `BREVO_API_KEY` con esa clave.
+La clave de Brevo está guardada en la tabla `wp_secrets` (RLS activo sin
+políticas: solo la service_role de las edge functions puede leerla). Para
+rotarla, genera una nueva en Brevo y ejecuta en el SQL Editor:
 
-Sin la clave, la app funciona igual (la solicitud se registra y se ve en el
-panel); simplemente no se envía el correo.
+```sql
+update public.wp_secrets set value = 'xkeysib-NUEVA-CLAVE', updated_at = now()
+where key = 'BREVO_API_KEY';
+```
+
+Si el envío falla, la solicitud igual queda registrada y visible en el panel.
 
 ## Backend (Supabase)
 

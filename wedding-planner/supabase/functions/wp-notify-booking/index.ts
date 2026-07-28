@@ -2,8 +2,9 @@
 // Al crear una solicitud de reserva, envía un correo al proveedor con los
 // datos de la pareja (nombre, fecha, invitados, teléfono, correo y mensaje).
 // Verifica que quien llama sea el autor de la solicitud. El envío usa la API
-// de Brevo; requiere el secreto BREVO_API_KEY (y opcionalmente SENDER_EMAIL,
-// SENDER_NAME, APP_URL) en Supabase → Edge Functions → Secrets.
+// de Brevo; la clave se lee del entorno (BREVO_API_KEY) o, si no existe, de
+// la tabla protegida wp_secrets (solo legible con service_role). Opcionales:
+// SENDER_EMAIL, SENDER_NAME, APP_URL.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -34,7 +35,12 @@ Deno.serve(async (req: Request) => {
     if (error || !b) return json({ ok: false, error: "not_found" }, 404);
     if (b.client_id !== user.id) return json({ ok: false, error: "forbidden" }, 403);
 
-    const key = Deno.env.get("BREVO_API_KEY");
+    // La clave puede venir del entorno o de la tabla protegida wp_secrets
+    let key = Deno.env.get("BREVO_API_KEY");
+    if (!key) {
+      const { data: sec } = await svc.from("wp_secrets").select("value").eq("key", "BREVO_API_KEY").maybeSingle();
+      key = sec?.value;
+    }
     if (!key) return json({ ok: false, error: "email_disabled" });
 
     const listing: any = b.wp_listings;
