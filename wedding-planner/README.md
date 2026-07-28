@@ -1,6 +1,6 @@
 # Wedding Planner
 
-Aplicación web elegante y minimalista para organizar bodas: reserva hoteles,
+Aplicación web elegante y minimalista para organizar bodas: reserva venues,
 contrata wedding planners y floristerías, y renta mobiliario para tu evento.
 
 ## Cómo funciona
@@ -14,7 +14,7 @@ Pages, Netlify, etc. El backend (cuentas, anuncios y reservas) es Supabase.
 - **Pareja (cliente):** explora el catálogo, envía solicitudes de reserva con
   fecha e invitados, y da seguimiento desde su panel. Al ser aceptada una
   solicitud, ve el contacto del proveedor.
-- **Proveedor:** publica anuncios (hotel, wedding planner, floristería o
+- **Proveedor:** publica anuncios (venue, wedding planner, floristería o
   mobiliario) con descripción, ubicación, precio y foto; recibe solicitudes y
   las acepta o declina desde su panel.
 

@@ -213,10 +213,10 @@ textarea{resize:vertical;min-height:90px}
 <main id="viewHome">
   <section class="hero">
     <div class="wrap">
-      <div class="eyebrow">Hoteles · Wedding Planners · Floristerías · Mobiliario</div>
+      <div class="eyebrow">Venues · Wedding Planners · Floristerías · Mobiliario</div>
       <h1>La boda de tus sueños, <em>organizada con calma</em></h1>
       <div class="hero-rule"></div>
-      <p>Reserva el hotel, contrata a tu wedding planner, elige la floristería y renta el mobiliario perfecto. Todo en un solo lugar, con elegancia y sin complicaciones.</p>
+      <p>Reserva el venue, contrata a tu wedding planner, elige la floristería y renta el mobiliario perfecto. Todo en un solo lugar, con elegancia y sin complicaciones.</p>
       <div class="hero-actions">
         <button class="btn gold" onclick="openAuth('signup','client')">Organiza tu boda</button>
         <button class="btn ghost" onclick="openAuth('signup','provider')">Anuncia tu servicio</button>
@@ -231,9 +231,9 @@ textarea{resize:vertical;min-height:90px}
         <p>Explora proveedores verificados en cada categoría esencial de tu boda.</p>
       </div>
       <div class="cats">
-        <div class="cat" onclick="filterCat('hotel')">
-          <div class="glyph">H</div>
-          <h3>Hoteles</h3>
+        <div class="cat" onclick="filterCat('venue')">
+          <div class="glyph">V</div>
+          <h3>Venues</h3>
           <p>Reserva el lugar ideal para tu ceremonia, recepción e invitados.</p>
         </div>
         <div class="cat" onclick="filterCat('planner')">
@@ -263,7 +263,7 @@ textarea{resize:vertical;min-height:90px}
       </div>
       <div class="filters">
         <button class="chip active" data-cat="all" onclick="filterCat('all')">Todos</button>
-        <button class="chip" data-cat="hotel" onclick="filterCat('hotel')">Hoteles</button>
+        <button class="chip" data-cat="venue" onclick="filterCat('venue')">Venues</button>
         <button class="chip" data-cat="planner" onclick="filterCat('planner')">Wedding Planners</button>
         <button class="chip" data-cat="florist" onclick="filterCat('florist')">Floristerías</button>
         <button class="chip" data-cat="furniture" onclick="filterCat('furniture')">Mobiliario</button>
@@ -283,7 +283,7 @@ textarea{resize:vertical;min-height:90px}
         <div class="step">
           <div class="n">01</div>
           <h3>Explora</h3>
-          <p>Navega hoteles, planners, floristerías y mobiliario. Filtra por categoría y encuentra tu estilo.</p>
+          <p>Navega venues, planners, floristerías y mobiliario. Filtra por categoría y encuentra tu estilo.</p>
         </div>
         <div class="step">
           <div class="n">02</div>
@@ -305,7 +305,7 @@ textarea{resize:vertical;min-height:90px}
         <h2>¿Te vas a <em>casar</em>?</h2>
         <p>Crea tu cuenta de pareja y gestiona todas tus reservas y solicitudes desde un solo panel.</p>
         <ul>
-          <li>Reserva hoteles para ceremonia y hospedaje</li>
+          <li>Reserva el venue para tu ceremonia y recepción</li>
           <li>Contrata wedding planners y floristerías</li>
           <li>Renta mobiliario para tu recepción</li>
           <li>Da seguimiento a cada solicitud</li>
@@ -314,7 +314,7 @@ textarea{resize:vertical;min-height:90px}
       </div>
       <div>
         <h2>¿Ofreces <em>servicios</em> de boda?</h2>
-        <p>Publica tu hotel, servicio de wedding planner, floristería o renta de mobiliario y recibe solicitudes directas.</p>
+        <p>Publica tu venue, servicio de wedding planner, floristería o renta de mobiliario y recibe solicitudes directas.</p>
         <ul>
           <li>Publica anuncios con fotos y precios</li>
           <li>Recibe solicitudes de parejas interesadas</li>
@@ -395,10 +395,10 @@ textarea{resize:vertical;min-height:90px}
         </div>
         <div class="role" id="roleProvider" onclick="pickRole('provider')">
           <span class="serif">Proveedor</span>
-          <span>Anunciar hotel, planner, flores o mobiliario</span>
+          <span>Anunciar venue, planner, flores o mobiliario</span>
         </div>
       </div>
-      <div class="field"><label id="nameLabel">Nombre completo</label><input id="suName" placeholder="Ej. María y José / Hotel Casa Blanca"></div>
+      <div class="field"><label id="nameLabel">Nombre completo</label><input id="suName" placeholder="Ej. María y José / Venue Casa Blanca"></div>
       <div class="field"><label>Teléfono (opcional)</label><input id="suPhone" placeholder="+502 5555 5555"></div>
       <div class="field"><label>Correo electrónico</label><input type="email" id="suEmail" placeholder="tu@correo.com"></div>
       <div class="field"><label>Contraseña</label><input type="password" id="suPass" placeholder="Mínimo 6 caracteres"></div>
@@ -417,13 +417,13 @@ textarea{resize:vertical;min-height:90px}
     <div id="lfMsg"></div>
     <div class="field"><label>Categoría</label>
       <select id="lfCat">
-        <option value="hotel">Hotel</option>
+        <option value="venue">Venue</option>
         <option value="planner">Wedding Planner</option>
         <option value="florist">Floristería</option>
         <option value="furniture">Renta de mobiliario</option>
       </select>
     </div>
-    <div class="field"><label>Título del anuncio</label><input id="lfName" placeholder="Ej. Hotel Boutique Jardines del Lago"></div>
+    <div class="field"><label>Título del anuncio</label><input id="lfName" placeholder="Ej. Venue Jardines del Lago"></div>
     <div class="field"><label>Descripción</label><textarea id="lfDesc" placeholder="Describe tu servicio, capacidad, estilo, qué incluye…"></textarea></div>
     <div class="grid2">
       <div class="field"><label>Ubicación</label><input id="lfLoc" placeholder="Ej. Antigua Guatemala"></div>
@@ -472,7 +472,7 @@ const SUPABASE_KEY = "sb_publishable_CSElvPJazzOG-GPQAYCpOQ_mFWU0MP6";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const CATS = {
-  hotel:"Hotel", planner:"Wedding Planner", florist:"Floristería", furniture:"Mobiliario"
+  venue:"Venue", planner:"Wedding Planner", florist:"Floristería", furniture:"Mobiliario"
 };
 const STATUS = { pending:"Pendiente", accepted:"Aceptada", declined:"Declinada", cancelled:"Cancelada" };
 
@@ -640,7 +640,7 @@ function openDetail(id){
   $('dLoc').textContent = l.location||'';
   $('dDesc').textContent = l.description||'';
   $('dPrice').innerHTML = l.price_from!=null?`${fmtQ(l.price_from)} <small>${esc(l.price_unit||'')}</small>`:'Precio a consultar';
-  $('bookTitle').textContent = l.category==='hotel' ? 'Solicitar reserva' : 'Solicitar servicio';
+  $('bookTitle').textContent = l.category==='venue' ? 'Solicitar reserva' : 'Solicitar servicio';
   msg('dMsg','');
   const isProvider = profile && profile.role==='provider';
   $('bookBox').style.display = isProvider ? 'none' : '';
@@ -708,7 +708,7 @@ function openListingForm(id){
   const l = id ? allMyListing(id) : null;
   $('lfTitle').textContent = id ? 'Editar anuncio' : 'Nuevo anuncio';
   $('lfBtn').textContent = id ? 'Guardar cambios' : 'Publicar anuncio';
-  $('lfCat').value = l?.category||'hotel';
+  $('lfCat').value = l?.category||'venue';
   $('lfName').value = l?.title||'';
   $('lfDesc').value = l?.description||'';
   $('lfLoc').value = l?.location||'';
