@@ -1,7 +1,7 @@
 -- Wedding Planner · Esquema de base de datos (Supabase)
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
 --   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
---   wp_add_photo_category)
+--   wp_add_photo_category, wp_provider_plans)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -9,6 +9,8 @@ create table if not exists public.wp_profiles (
   role text not null check (role in ('provider','client')),
   full_name text not null,
   phone text,
+  plan text not null default 'free' check (plan in ('free','premium')),
+  plan_expires_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -67,6 +69,63 @@ drop trigger if exists wp_on_auth_user_created on auth.users;
 create trigger wp_on_auth_user_created
   after insert on auth.users
   for each row execute function public.wp_handle_new_user();
+
+-- Planes de proveedor: free = 1 anuncio activo; premium ("Destacado") = ilimitado
+create or replace function public.wp_is_premium(p uuid)
+returns boolean
+language sql stable
+as $$
+  select exists (
+    select 1 from public.wp_profiles
+    where id = p and plan = 'premium'
+      and (plan_expires_at is null or plan_expires_at > now())
+  );
+$$;
+
+create or replace function public.wp_enforce_listing_limit()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.active and not public.wp_is_premium(new.provider_id) then
+    if (select count(*) from public.wp_listings
+        where provider_id = new.provider_id and active and id <> new.id) >= 1 then
+      raise exception 'PLAN_LIMIT';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.wp_enforce_listing_limit() from public, anon, authenticated;
+
+drop trigger if exists wp_listing_limit on public.wp_listings;
+create trigger wp_listing_limit
+  before insert or update of active on public.wp_listings
+  for each row execute function public.wp_enforce_listing_limit();
+
+-- Solo el administrador (SQL / dashboard con service role) puede cambiar el plan
+create or replace function public.wp_protect_plan_columns()
+returns trigger
+language plpgsql
+as $$
+begin
+  if current_setting('request.jwt.claims', true) is not null
+     and coalesce(current_setting('request.jwt.claims', true)::jsonb->>'role','') = 'authenticated'
+     and (new.plan is distinct from old.plan or new.plan_expires_at is distinct from old.plan_expires_at) then
+    raise exception 'PLAN_PROTECTED';
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.wp_protect_plan_columns() from public, anon, authenticated;
+
+drop trigger if exists wp_protect_plan on public.wp_profiles;
+create trigger wp_protect_plan
+  before update on public.wp_profiles
+  for each row execute function public.wp_protect_plan_columns();
 
 -- Seguridad a nivel de fila (RLS)
 alter table public.wp_profiles enable row level security;
