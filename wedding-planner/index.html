@@ -141,6 +141,26 @@ header{position:sticky;top:0;z-index:50;background:rgba(250,248,244,.92);backdro
 .plan li.off{color:var(--muted);text-decoration:line-through}
 @media(max-width:700px){.plans{grid-template-columns:1fr}}
 
+/* calendar */
+.cal{max-width:340px;margin:0 auto}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cal-title{font-family:var(--disp);font-size:18px;text-transform:capitalize}
+.cal-nav{background:none;border:1px solid var(--line);border-radius:50%;width:30px;height:30px;font-size:16px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.cal-nav:hover{border-color:var(--gold);color:var(--gold-dark)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{font-size:10px;letter-spacing:1px;color:var(--muted);text-align:center;text-transform:uppercase;padding:4px 0}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:50%;cursor:pointer;transition:transform .1s}
+.cal-day:hover{transform:scale(1.08)}
+.cal-day.free{background:#eaf2ea;color:#3f6d42}
+.cal-day.busy{background:#f7e9e9;color:#a34d4d}
+.cal-day.past{color:#d8d2c8;cursor:default;background:none}
+.cal-day.past:hover{transform:none}
+.cal-day.sel{outline:2px solid var(--gold);outline-offset:1px;font-weight:600}
+.cal-legend{display:flex;gap:18px;justify-content:center;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.cal-legend .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.cal-legend .dot.free{background:#eaf2ea;border:1px solid #3f6d42}
+.cal-legend .dot.busy{background:#f7e9e9;border:1px solid #a34d4d}
+
 /* reviews */
 .card-rating{font-size:13px;color:var(--gold-dark);letter-spacing:.5px}
 .card-rating small{color:var(--muted)}
@@ -450,6 +470,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="tabs" style="margin-top:0">
         <button class="tab active" id="tabL" onclick="provTab('listings')">Mis anuncios</button>
         <button class="tab" id="tabR" onclick="provTab('requests')">Solicitudes recibidas</button>
+        <button class="tab" id="tabA" onclick="provTab('avail')">Disponibilidad</button>
       </div>
       <div id="provListings">
         <div style="margin-bottom:22px"><button class="btn gold sm" onclick="openListingForm()">+ Nuevo anuncio</button></div>
@@ -457,6 +478,11 @@ textarea{resize:vertical;min-height:90px}
       </div>
       <div id="provRequests" class="hidden">
         <div class="list" id="reqList"></div>
+      </div>
+      <div id="provAvail" class="hidden">
+        <div class="note" style="max-width:520px;margin:0 auto 22px;text-align:center">Toca un día para marcarlo como <strong>ocupado</strong> (rojo) o volver a dejarlo <strong>disponible</strong> (verde). Las parejas verán este calendario al elegir su fecha. Los días de solicitudes que aceptes se marcan ocupados automáticamente.</div>
+        <div class="cal" id="provCal"></div>
+        <div class="cal-legend"><span><span class="dot free"></span>Disponible</span><span><span class="dot busy"></span>Ocupado</span></div>
       </div>
     </div>
 
@@ -612,8 +638,13 @@ textarea{resize:vertical;min-height:90px}
     <div id="bookBox" style="border-top:1px solid var(--line);padding-top:22px">
       <h3 style="font-size:21px;margin-bottom:14px" id="bookTitle">Solicitar reserva</h3>
       <div id="dMsg"></div>
+      <div class="field">
+        <label>Elige la fecha en el calendario del proveedor</label>
+        <div class="cal" id="dCal" style="margin:8px auto 4px"></div>
+        <div class="cal-legend"><span><span class="dot free"></span>Disponible</span><span><span class="dot busy"></span>Ocupado</span></div>
+      </div>
       <div class="grid2">
-        <div class="field"><label>Fecha del evento</label><input type="date" id="bkDate"></div>
+        <div class="field"><label>Fecha elegida</label><input type="date" id="bkDate" onchange="renderDetailCal()"></div>
         <div class="field"><label>Nº de invitados</label><input type="number" id="bkGuests" placeholder="120" min="1"></div>
       </div>
       <div class="field"><label>Mensaje para el proveedor</label><textarea id="bkMsg" placeholder="Cuéntale sobre tu boda, horario, estilo…"></textarea></div>
@@ -878,10 +909,90 @@ function openDetail(id){
   const isProvider = profile && profile.role==='provider';
   $('bookBox').style.display = isProvider ? 'none' : '';
   $('revWrite').style.display = isProvider ? 'none' : '';
+  dCalState = { y: now0.getFullYear(), m: now0.getMonth() };
+  loadDetailBlocked();
   loadDetailReviews();
   $('detailOverlay').classList.remove('hidden');
 }
 function closeDetail(){ $('detailOverlay').classList.add('hidden'); }
+
+/* ---- calendario de disponibilidad ---- */
+function calHTML(state, blockedSet, actFn, selected){
+  const first = new Date(state.y, state.m, 1);
+  const offset = (first.getDay()+6)%7; // semana inicia lunes
+  const dim = new Date(state.y, state.m+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const title = first.toLocaleDateString('es-GT',{month:'long',year:'numeric'});
+  let h = `<div class="cal-head">
+    <button class="cal-nav" onclick="${actFn}('prev')">‹</button>
+    <div class="cal-title">${title}</div>
+    <button class="cal-nav" onclick="${actFn}('next')">›</button>
+  </div><div class="cal-grid">`;
+  ['L','M','M','J','V','S','D'].forEach(d=>h+=`<div class="cal-dow">${d}</div>`);
+  for(let i=0;i<offset;i++) h+='<div></div>';
+  for(let d=1; d<=dim; d++){
+    const ds = `${state.y}-${String(state.m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const past = new Date(state.y, state.m, d) < today;
+    let cls = past ? 'past' : (blockedSet.has(ds) ? 'busy' : 'free');
+    if(selected === ds) cls += ' sel';
+    h += `<div class="cal-day ${cls}"${past?'':` onclick="${actFn}('day','${ds}')"`}>${d}</div>`;
+  }
+  return h + '</div>';
+}
+function calNav(state, dir){
+  state.m += dir==='next' ? 1 : -1;
+  if(state.m > 11){ state.m = 0; state.y++; }
+  if(state.m < 0){ state.m = 11; state.y--; }
+}
+
+/* proveedor: marcar días ocupados */
+const now0 = new Date();
+let provCalState = { y: now0.getFullYear(), m: now0.getMonth() };
+let provBlocked = new Set();
+
+async function loadProvBlocked(){
+  const { data } = await sb.from('wp_blocked_days').select('day').eq('provider_id', session.user.id);
+  provBlocked = new Set((data||[]).map(r=>r.day));
+  renderProvCal();
+}
+function renderProvCal(){ $('provCal').innerHTML = calHTML(provCalState, provBlocked, 'provCalAct'); }
+
+async function provCalAct(type, ds){
+  if(type!=='day'){ calNav(provCalState, type); renderProvCal(); return; }
+  if(provBlocked.has(ds)){
+    const { error } = await sb.from('wp_blocked_days').delete().eq('provider_id', session.user.id).eq('day', ds);
+    if(error){ toast('No se pudo actualizar: '+error.message); return; }
+    provBlocked.delete(ds);
+  } else {
+    const { error } = await sb.from('wp_blocked_days').insert({ provider_id: session.user.id, day: ds });
+    if(error){ toast('No se pudo actualizar: '+error.message); return; }
+    provBlocked.add(ds);
+  }
+  renderProvCal();
+}
+
+/* pareja: elegir fecha disponible */
+let dCalState = { y: now0.getFullYear(), m: now0.getMonth() };
+let dBlocked = new Set();
+
+async function loadDetailBlocked(){
+  const pid = curListing?.provider_id;
+  dBlocked = new Set();
+  renderDetailCal();
+  if(!pid) return;
+  const { data } = await sb.from('wp_blocked_days').select('day').eq('provider_id', pid);
+  if(curListing?.provider_id !== pid) return;
+  dBlocked = new Set((data||[]).map(r=>r.day));
+  renderDetailCal();
+}
+function renderDetailCal(){ $('dCal').innerHTML = calHTML(dCalState, dBlocked, 'detailCalAct', $('bkDate').value||null); }
+
+function detailCalAct(type, ds){
+  if(type!=='day'){ calNav(dCalState, type); renderDetailCal(); return; }
+  if(dBlocked.has(ds)){ toast('Ese día no está disponible. Elige un día en verde.'); return; }
+  $('bkDate').value = ds;
+  renderDetailCal();
+}
 
 /* ---- reseñas ---- */
 const starsOf = n => '★'.repeat(n) + '☆'.repeat(5-n);
@@ -976,14 +1087,20 @@ async function sendBooking(){
   if(!session){ closeDetail(); openAuth('signup','client'); return; }
   if(profile && profile.role==='provider'){ toast('Las cuentas de proveedor no pueden reservar.'); return; }
   const date=$('bkDate').value, guests=$('bkGuests').value, text=$('bkMsg').value.trim();
-  if(!date){ msg('dMsg','Selecciona la fecha de tu evento.'); return; }
+  if(!date){ msg('dMsg','Selecciona la fecha de tu evento en el calendario.'); return; }
+  if(dBlocked.has(date)){ msg('dMsg','Esa fecha no está disponible para este proveedor. Elige un día en verde.'); return; }
   $('bkBtn').disabled = true;
   const { data: booking, error } = await sb.from('wp_bookings').insert({
     listing_id: curListing.id, client_id: session.user.id,
     event_date: date, guests: guests?Number(guests):null, message: text||null
   }).select('id').single();
   $('bkBtn').disabled = false;
-  if(error){ msg('dMsg','No se pudo enviar la solicitud: '+error.message); return; }
+  if(error){
+    msg('dMsg', /DAY_BLOCKED/.test(error.message)
+      ? 'Esa fecha no está disponible para este proveedor. Elige un día en verde.'
+      : 'No se pudo enviar la solicitud: '+error.message);
+    return;
+  }
   // aviso por correo al proveedor (si falla, la solicitud igual queda registrada)
   if(booking) sb.functions.invoke('wp-notify-booking', { body: { booking_id: booking.id } }).catch(()=>{});
   closeDetail();
@@ -1000,7 +1117,7 @@ function renderDash(){
   $('dashSub').textContent = isProv ? 'Gestiona tus anuncios y responde a las solicitudes de las parejas.' : 'Da seguimiento a tus reservas y solicitudes de servicios.';
   $('provPanel').classList.toggle('hidden', !isProv);
   $('clientPanel').classList.toggle('hidden', isProv);
-  if(isProv){ renderPlanBanner(); loadMyListings(); loadRequests(); } else loadMyBookings();
+  if(isProv){ renderPlanBanner(); loadMyListings(); loadRequests(); loadProvBlocked(); } else loadMyBookings();
 }
 
 function renderPlanBanner(){
@@ -1094,8 +1211,10 @@ async function adminSetPlan(days){
 function provTab(t){
   $('tabL').classList.toggle('active', t==='listings');
   $('tabR').classList.toggle('active', t==='requests');
+  $('tabA').classList.toggle('active', t==='avail');
   $('provListings').classList.toggle('hidden', t!=='listings');
   $('provRequests').classList.toggle('hidden', t!=='requests');
+  $('provAvail').classList.toggle('hidden', t!=='avail');
 }
 
 /* ---- provider: listings CRUD ---- */
