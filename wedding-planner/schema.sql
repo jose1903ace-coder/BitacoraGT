@@ -2,7 +2,7 @@
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
 --   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
 --   wp_add_photo_category, wp_provider_plans, wp_admin_set_plan_rpc,
---   wp_images_bucket, wp_profile_email, wp_reviews)
+--   wp_images_bucket, wp_profile_email, wp_reviews, wp_availability)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -198,6 +198,26 @@ create policy "wp_bookings_update_parties" on public.wp_bookings for update
     auth.uid() = client_id
     or exists (select 1 from public.wp_listings l where l.id = listing_id and l.provider_id = auth.uid())
   );
+
+-- Agenda de disponibilidad por proveedor: días bloqueados (ocupados).
+-- Por defecto todos los días futuros están disponibles.
+create table if not exists public.wp_blocked_days (
+  provider_id uuid not null references public.wp_profiles(id) on delete cascade,
+  day date not null,
+  primary key (provider_id, day)
+);
+
+alter table public.wp_blocked_days enable row level security;
+
+create policy "wp_blocked_select" on public.wp_blocked_days for select using (true);
+create policy "wp_blocked_insert_own" on public.wp_blocked_days for insert
+  with check (auth.uid() = provider_id);
+create policy "wp_blocked_delete_own" on public.wp_blocked_days for delete
+  using (auth.uid() = provider_id);
+
+-- Rechazar solicitudes en días bloqueados (trigger wp_booking_day_check) y
+-- bloquear automáticamente el día al aceptar una solicitud
+-- (trigger wp_booking_accept_block); ver migración wp_availability.
 
 -- Reseñas: 1-5 estrellas + comentario corto. Solo parejas con una solicitud
 -- aceptada en ese anuncio; una reseña por pareja por anuncio.
