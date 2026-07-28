@@ -130,6 +130,13 @@ header{position:sticky;top:0;z-index:50;background:rgba(250,248,244,.92);backdro
 .plan li.off{color:var(--muted);text-decoration:line-through}
 @media(max-width:700px){.plans{grid-template-columns:1fr}}
 
+/* photo upload */
+.upload{border:1.5px dashed var(--line);border-radius:2px;background:var(--bg);min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:14px;text-align:center;transition:border .2s;overflow:hidden}
+.upload:hover{border-color:var(--gold)}
+.upload img{max-height:160px;max-width:100%;object-fit:cover;border-radius:2px}
+.upload span{font-size:13.5px;color:var(--muted)}
+.upload .cam{font-family:var(--disp);font-size:26px;color:var(--gold)}
+
 /* plan banner (provider dashboard) */
 .plan-banner{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--gold);padding:18px 24px;border-radius:2px;margin-bottom:26px}
 .plan-banner .grow{flex:1;min-width:220px}
@@ -221,7 +228,7 @@ textarea{resize:vertical;min-height:90px}
       <a href="#" onclick="go('home');return false">Inicio</a>
       <a href="#servicios" onclick="go('home','servicios');return false">Servicios</a>
       <a href="#como" onclick="go('home','como');return false">Cómo funciona</a>
-      <a href="#planes" onclick="go('home','planes');return false">Planes</a>
+      <a href="#planes" id="navPlanes" onclick="go('home','planes');return false">Planes</a>
     </nav>
     <div style="display:flex;gap:10px;align-items:center">
       <span id="userChip" class="hidden" style="font-size:13px;color:var(--muted)"></span>
@@ -521,7 +528,17 @@ textarea{resize:vertical;min-height:90px}
         <option value="por paquete">por paquete</option>
       </select>
     </div>
-    <div class="field"><label>URL de imagen (opcional)</label><input id="lfImg" placeholder="https://…"></div>
+    <div class="field"><label>Foto del anuncio</label>
+      <div class="upload" onclick="$('lfFile').click()">
+        <img id="lfPreview" class="hidden" alt="">
+        <div id="lfUpEmpty">
+          <div class="cam">✦</div>
+          <span>Toca aquí para elegir una foto<br>de tu galería o tomar una nueva</span>
+        </div>
+      </div>
+      <input type="file" id="lfFile" accept="image/*" class="hidden" onchange="previewPhoto(this)">
+      <div style="margin-top:6px"><a id="lfRemove" class="hidden" style="font-size:12.5px;color:var(--red);cursor:pointer;border-bottom:1px solid var(--red)" onclick="removePhoto()">Quitar foto</a></div>
+    </div>
     <button class="btn gold" style="width:100%" id="lfBtn" onclick="saveListing()">Publicar anuncio</button>
   </div>
 </div>
@@ -674,6 +691,10 @@ function paintAuthUI(){
   $('btnDash').style.display = logged ? '' : 'none';
   $('userChip').classList.toggle('hidden', !logged);
   if(logged && profile) $('userChip').textContent = profile.full_name;
+  // la sección de planes es para proveedores (y visitantes); se oculta a las parejas
+  const isClient = logged && profile && profile.role === 'client';
+  $('planes').classList.toggle('hidden', isClient);
+  $('navPlanes').classList.toggle('hidden', isClient);
 }
 
 /* ================= LISTINGS (public catalog) ================= */
@@ -882,6 +903,9 @@ async function loadMyListings(){
     </div>`).join('') : `<div class="empty"><div class="serif">Aún no tienes anuncios</div><p>Publica tu primer anuncio para empezar a recibir solicitudes.</p></div>`;
 }
 
+let lfExistingImage = null;   // foto ya guardada del anuncio (al editar)
+let lfPhotoRemoved = false;   // el usuario quitó la foto
+
 function openListingForm(id){
   editingId = id||null;
   const l = id ? allMyListing(id) : null;
@@ -893,9 +917,54 @@ function openListingForm(id){
   $('lfLoc').value = l?.location||'';
   $('lfPrice').value = l?.price_from??'';
   $('lfUnit').value = l?.price_unit||'por evento';
-  $('lfImg').value = l?.image_url||'';
+  lfExistingImage = l?.image_url||null;
+  lfPhotoRemoved = false;
+  $('lfFile').value = '';
+  paintPhotoBox(lfExistingImage);
   msg('lfMsg','');
   $('listingOverlay').classList.remove('hidden');
+}
+
+function paintPhotoBox(src){
+  $('lfPreview').classList.toggle('hidden', !src);
+  $('lfUpEmpty').classList.toggle('hidden', !!src);
+  $('lfRemove').classList.toggle('hidden', !src);
+  if(src) $('lfPreview').src = src;
+}
+
+function previewPhoto(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  lfPhotoRemoved = false;
+  paintPhotoBox(URL.createObjectURL(f));
+}
+
+function removePhoto(){
+  $('lfFile').value = '';
+  lfPhotoRemoved = true;
+  paintPhotoBox(null);
+}
+
+// Reduce la foto (máx 1600 px, JPEG) para que suba rápido desde el celular
+async function compressImage(file){
+  try{
+    const img = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width*scale);
+    canvas.height = Math.round(img.height*scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', .85));
+    return blob || file;
+  }catch(_e){ return file; }
+}
+
+async function uploadPhoto(file){
+  const blob = await compressImage(file);
+  const path = `${session.user.id}/${Date.now()}.jpg`;
+  const { error } = await sb.storage.from('wp-images').upload(path, blob, { contentType:'image/jpeg' });
+  if(error) throw error;
+  return sb.storage.from('wp-images').getPublicUrl(path).data.publicUrl;
 }
 let myListingsCache = [];
 function allMyListing(id){ return myListingsCache.find(x=>x.id===id); }
@@ -908,11 +977,29 @@ async function saveListing(){
     description: $('lfDesc').value.trim()||null,
     location: $('lfLoc').value.trim()||null,
     price_from: $('lfPrice').value?Number($('lfPrice').value):null,
-    price_unit: $('lfUnit').value,
-    image_url: $('lfImg').value.trim()||null
+    price_unit: $('lfUnit').value
   };
   if(!payload.title){ msg('lfMsg','El anuncio necesita un título.'); return; }
   $('lfBtn').disabled = true;
+  const newFile = $('lfFile').files && $('lfFile').files[0];
+  if(newFile){
+    $('lfBtn').textContent = 'Subiendo foto…';
+    try{
+      payload.image_url = await uploadPhoto(newFile);
+    }catch(e){
+      $('lfBtn').disabled = false;
+      $('lfBtn').textContent = editingId ? 'Guardar cambios' : 'Publicar anuncio';
+      msg('lfMsg','No se pudo subir la foto: '+(e.message||e)+'. Intenta con otra imagen.');
+      return;
+    }
+    $('lfBtn').textContent = 'Guardando…';
+  } else if(lfPhotoRemoved){
+    payload.image_url = null;
+  } else if(lfExistingImage){
+    payload.image_url = lfExistingImage;
+  } else {
+    payload.image_url = null;
+  }
   let error;
   if(editingId){
     ({ error } = await sb.from('wp_listings').update(payload).eq('id', editingId));
@@ -921,6 +1008,7 @@ async function saveListing(){
     ({ error } = await sb.from('wp_listings').insert(payload));
   }
   $('lfBtn').disabled = false;
+  $('lfBtn').textContent = editingId ? 'Guardar cambios' : 'Publicar anuncio';
   if(error){
     msg('lfMsg', /PLAN_LIMIT/.test(error.message)
       ? `Tu plan Gratis permite 1 anuncio activo. Oculta el otro anuncio o pasa al plan Destacado (${PLAN_PRICE}) para publicar sin límite.`

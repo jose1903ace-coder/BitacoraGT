@@ -1,7 +1,8 @@
 -- Wedding Planner · Esquema de base de datos (Supabase)
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
 --   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
---   wp_add_photo_category, wp_provider_plans, wp_admin_set_plan_rpc)
+--   wp_add_photo_category, wp_provider_plans, wp_admin_set_plan_rpc,
+--   wp_images_bucket)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -195,3 +196,19 @@ create policy "wp_bookings_update_parties" on public.wp_bookings for update
     auth.uid() = client_id
     or exists (select 1 from public.wp_listings l where l.id = listing_id and l.provider_id = auth.uid())
   );
+
+-- Fotos de anuncios: bucket público 'wp-images' (máx 5 MB, solo imágenes).
+-- Cada usuario sube a su carpeta (auth.uid()); lectura pública; borra el dueño.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('wp-images','wp-images', true, 5242880,
+        array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do nothing;
+
+create policy "wp_images_insert" on storage.objects for insert to authenticated
+  with check (bucket_id = 'wp-images' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "wp_images_update" on storage.objects for update to authenticated
+  using (bucket_id = 'wp-images' and owner = auth.uid());
+create policy "wp_images_delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'wp-images' and owner = auth.uid());
+create policy "wp_images_read" on storage.objects for select
+  using (bucket_id = 'wp-images');

@@ -15,8 +15,11 @@ Pages, Netlify, etc. El backend (cuentas, anuncios y reservas) es Supabase.
   fecha e invitados, y da seguimiento desde su panel. Al ser aceptada una
   solicitud, ve el contacto del proveedor.
 - **Proveedor:** publica anuncios (venue, wedding planner, floristería,
-  fotógrafo o mobiliario) con descripción, ubicación, precio y foto; recibe solicitudes y
-  las acepta o declina desde su panel.
+  fotógrafo o mobiliario) con descripción, ubicación, precio y foto — la foto
+  se elige de la galería o cámara y se sube a Supabase Storage (bucket
+  `wp-images`) comprimida automáticamente; recibe solicitudes y las acepta o
+  declina desde su panel. La sección de planes solo se muestra a proveedores
+  y visitantes, no a las parejas.
 
 ## Planes para proveedores (monetización)
 
