@@ -678,7 +678,7 @@ async function loadProfile(){
   if(!profile){
     // fallback: create from metadata if trigger didn't run
     const md = session.user.user_metadata||{};
-    const ins = { id: session.user.id, role: md.role==='provider'?'provider':'client', full_name: md.full_name||session.user.email, phone: md.phone||null };
+    const ins = { id: session.user.id, role: md.role==='provider'?'provider':'client', full_name: md.full_name||session.user.email, phone: md.phone||null, email: session.user.email };
     const { data: p } = await sb.from('wp_profiles').insert(ins).select().maybeSingle();
     profile = p || ins;
   }
@@ -766,12 +766,14 @@ async function sendBooking(){
   const date=$('bkDate').value, guests=$('bkGuests').value, text=$('bkMsg').value.trim();
   if(!date){ msg('dMsg','Selecciona la fecha de tu evento.'); return; }
   $('bkBtn').disabled = true;
-  const { error } = await sb.from('wp_bookings').insert({
+  const { data: booking, error } = await sb.from('wp_bookings').insert({
     listing_id: curListing.id, client_id: session.user.id,
     event_date: date, guests: guests?Number(guests):null, message: text||null
-  });
+  }).select('id').single();
   $('bkBtn').disabled = false;
   if(error){ msg('dMsg','No se pudo enviar la solicitud: '+error.message); return; }
+  // aviso por correo al proveedor (si falla, la solicitud igual queda registrada)
+  if(booking) sb.functions.invoke('wp-notify-booking', { body: { booking_id: booking.id } }).catch(()=>{});
   closeDetail();
   toast('Solicitud enviada. El proveedor te responderá pronto.');
   $('bkDate').value=''; $('bkGuests').value=''; $('bkMsg').value='';
@@ -1044,14 +1046,15 @@ async function loadRequests(){
   const ids = myListingsCache.map(l=>l.id);
   if(!ids.length){ $('reqList').innerHTML = `<div class="empty"><div class="serif">Sin solicitudes todavía</div><p>Publica anuncios para recibir solicitudes.</p></div>`; return; }
   const { data } = await sb.from('wp_bookings')
-    .select('*, wp_listings(title,category), wp_profiles(full_name,phone)')
+    .select('*, wp_listings(title,category), wp_profiles(full_name,phone,email)')
     .in('listing_id', ids).order('created_at',{ascending:false});
   const items = data||[];
   $('reqList').innerHTML = items.length ? items.map(b=>`
     <div class="row">
       <div class="grow">
         <h3>${esc(b.wp_profiles?.full_name||'Pareja')}</h3>
-        <div class="meta">${esc(b.wp_listings?.title||'')} · ${fmtDate(b.event_date)} · ${b.guests?b.guests+' invitados':'invitados por definir'}${b.wp_profiles?.phone?' · Tel: '+esc(b.wp_profiles.phone):''}</div>
+        <div class="meta">${esc(b.wp_listings?.title||'')} · ${fmtDate(b.event_date)} · ${b.guests?b.guests+' invitados':'invitados por definir'}</div>
+        <div class="meta">${b.wp_profiles?.phone?'Tel: '+esc(b.wp_profiles.phone)+' · ':''}${b.wp_profiles?.email?`Correo: <a href="mailto:${esc(b.wp_profiles.email)}" style="color:var(--gold-dark)">${esc(b.wp_profiles.email)}</a>`:''}</div>
         ${b.message?`<div class="meta" style="margin-top:6px;font-style:italic">“${esc(b.message)}”</div>`:''}
       </div>
       <span class="status ${b.status}">${STATUS[b.status]||b.status}</span>
@@ -1072,19 +1075,22 @@ async function setStatus(id, status){
 /* ---- client: my bookings ---- */
 async function loadMyBookings(){
   const { data } = await sb.from('wp_bookings')
-    .select('*, wp_listings(title,category,location, wp_profiles(full_name,phone))')
+    .select('*, wp_listings(title,category,location, wp_profiles(full_name,phone,email))')
     .eq('client_id', session.user.id).order('created_at',{ascending:false});
   const items = data||[];
-  $('myBookings').innerHTML = items.length ? items.map(b=>`
+  $('myBookings').innerHTML = items.length ? items.map(b=>{
+    const p = b.wp_listings?.wp_profiles;
+    const contacto = p ? `<div class="meta" style="margin-top:6px;${b.status==='accepted'?'color:var(--green)':''}">Contacto del proveedor: ${esc(p.full_name)}${p.phone?' · Tel: '+esc(p.phone):''}${p.email?` · <a href="mailto:${esc(p.email)}" style="color:var(--gold-dark)">${esc(p.email)}</a>`:''}</div>` : '';
+    return `
     <div class="row">
       <div class="grow">
         <h3>${esc(b.wp_listings?.title||'Anuncio eliminado')}</h3>
         <div class="meta">${CATS[b.wp_listings?.category]||''} · ${fmtDate(b.event_date)} · ${b.guests?b.guests+' invitados':''}</div>
-        ${b.status==='accepted'&&b.wp_listings?.wp_profiles?`<div class="meta" style="margin-top:6px;color:var(--green)">Contacto: ${esc(b.wp_listings.wp_profiles.full_name)}${b.wp_listings.wp_profiles.phone?' · '+esc(b.wp_listings.wp_profiles.phone):''}</div>`:''}
+        ${contacto}
       </div>
       <span class="status ${b.status}">${STATUS[b.status]||b.status}</span>
       ${b.status==='pending'?`<button class="btn ghost sm" onclick="cancelBooking('${b.id}')">Cancelar</button>`:''}
-    </div>`).join('') : `<div class="empty"><div class="serif">Aún no tienes solicitudes</div><p>Explora el catálogo y solicita tu primera reserva.</p></div>`;
+    </div>`;}).join('') : `<div class="empty"><div class="serif">Aún no tienes solicitudes</div><p>Explora el catálogo y solicita tu primera reserva.</p></div>`;
 }
 
 async function cancelBooking(id){
