@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wedding Planner · Demo con 500 proveedores</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#faf8f4; --panel:#ffffff; --ink:#221f1b; --muted:#8a8278; --line:#e8e2d8;
+  --gold:#b08d57; --gold-dark:#96754a; --gold-soft:#f3ece1; --green:#5b8a5e; --red:#b05757;
+  --disp:'Cormorant Garamond',Georgia,serif; --body:'Jost',system-ui,sans-serif;
+  --shadow:0 10px 40px rgba(34,31,27,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:9px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+h1,h2,h3,.serif{font-family:var(--disp);font-weight:500;line-height:1.15}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--body);cursor:pointer}
+img{max-width:100%}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.hidden{display:none!important}
+
+/* ---------- header ---------- */
+header{position:sticky;top:0;z-index:50;background:rgba(250,248,244,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+.logo{font-family:var(--disp);font-size:24px;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
+.logo .ring{width:26px;height:26px;border:1.5px solid var(--gold);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:var(--gold);font-family:var(--body)}
+.nav-links{display:flex;gap:28px;align-items:center;font-size:14px;letter-spacing:1.2px;text-transform:uppercase}
+.nav-links a{color:var(--muted);transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;padding:12px 26px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:400;transition:all .25s;border-radius:2px}
+.btn:hover{background:var(--gold-dark);border-color:var(--gold-dark)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:#fff}
+.btn.gold{background:var(--gold);border-color:var(--gold)}
+.btn.gold:hover{background:var(--gold-dark)}
+.btn.sm{padding:8px 16px;font-size:11px}
+.btn.danger{background:transparent;border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
+.btn.green{background:transparent;border-color:var(--green);color:var(--green)}
+.btn.green:hover{background:var(--green);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:50%;transition:all .25s;padding:0}
+.iconbtn:hover{border-color:var(--gold);color:var(--gold-dark);background:var(--gold-soft)}
+
+/* ---------- hero ---------- */
+.hero{padding:110px 0 90px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(600px 300px at 15% 10%,rgba(176,141,87,.10),transparent),
+  radial-gradient(600px 300px at 85% 90%,rgba(176,141,87,.08),transparent)}
+.hero>*{position:relative}
+.eyebrow{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);margin-bottom:22px}
+.hero h1{font-size:clamp(42px,7vw,76px);font-weight:500;max-width:800px;margin:0 auto 24px}
+.hero h1 em{font-style:italic;color:var(--gold-dark)}
+.hero p{max-width:540px;margin:0 auto 40px;color:var(--muted);font-size:17px}
+.hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.hero-rule{width:60px;height:1px;background:var(--gold);margin:0 auto 26px}
+
+/* ---------- sections ---------- */
+.section{padding:80px 0}
+.section-head{text-align:center;margin-bottom:52px}
+.section-head h2{font-size:clamp(30px,4vw,42px);margin-bottom:12px}
+.section-head p{color:var(--muted);max-width:520px;margin:0 auto}
+
+/* categories */
+.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+.cat{background:var(--panel);border:1px solid var(--line);padding:36px 18px;text-align:center;cursor:pointer;transition:all .3s;border-radius:2px}
+.cat:hover{border-color:var(--gold);box-shadow:var(--shadow);transform:translateY(-3px)}
+.cat h3{font-size:21px;margin-bottom:8px;padding-top:6px}
+.cat h3::after{content:'';display:block;width:28px;height:1px;background:var(--gold);margin:12px auto 0}
+.cat p{font-size:13.5px;color:var(--muted)}
+
+/* listings */
+.filters{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:40px}
+.chip{border:1px solid var(--line);background:var(--panel);padding:9px 20px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-radius:30px;transition:all .2s}
+.chip:hover{border-color:var(--gold);color:var(--ink)}
+.chip.active{background:var(--ink);border-color:var(--ink);color:#fff}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:2px;overflow:hidden;transition:all .3s;display:flex;flex-direction:column}
+.card:hover{box-shadow:var(--shadow);transform:translateY(-3px)}
+.card-img{height:190px;background:linear-gradient(135deg,var(--gold-soft),#efe6d7);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.card-img img{width:100%;height:100%;object-fit:cover}
+.card-img .ph{font-family:var(--disp);font-size:44px;color:var(--gold);opacity:.55;font-style:italic}
+.card-tag{position:absolute;top:12px;left:12px;background:rgba(255,255,255,.94);padding:5px 12px;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold-dark);border-radius:20px}
+.card-feat{position:absolute;top:12px;right:12px;background:var(--ink);color:var(--gold);padding:5px 12px;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;border-radius:20px}
+.card-body{padding:22px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card-body h3{font-size:22px}
+.card-loc{font-size:12.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.card-desc{font-size:14px;color:var(--muted);flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:14px;border-top:1px solid var(--line)}
+.price{font-family:var(--disp);font-size:20px}
+.price small{font-family:var(--body);font-size:11.5px;color:var(--muted);letter-spacing:.5px}
+.empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted)}
+.empty .serif{font-size:26px;margin-bottom:8px;color:var(--ink)}
+
+/* how it works */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
+.step{text-align:center}
+.step .n{font-family:var(--disp);font-style:italic;font-size:46px;color:var(--gold);opacity:.9}
+.step h3{font-size:22px;margin:8px 0 10px}
+.step p{font-size:14.5px;color:var(--muted)}
+
+/* dual accounts band */
+.band{background:var(--ink);color:#f5f1ea;padding:90px 0}
+.band .grid{display:grid;grid-template-columns:1fr 1fr;gap:60px}
+.band h2{font-size:clamp(28px,3.6vw,38px);margin-bottom:14px}
+.band h2 em{font-style:italic;color:var(--gold)}
+.band p{color:#b7ae9f;font-size:15px;margin-bottom:26px}
+.band ul{list-style:none;margin-bottom:30px}
+.band li{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09);font-size:14.5px;color:#d9d2c4}
+.band li::before{content:'—';color:var(--gold);margin-right:12px}
+.band .btn{border-color:var(--gold);background:var(--gold)}
+.band .btn.ghost{background:transparent;color:#f5f1ea}
+.band .btn.ghost:hover{background:var(--gold);border-color:var(--gold)}
+
+/* pricing */
+.plans{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;max-width:820px;margin:0 auto}
+.plan{background:var(--panel);border:1px solid var(--line);padding:42px 36px;border-radius:2px;display:flex;flex-direction:column}
+.plan.feat{border-color:var(--gold);box-shadow:var(--shadow);position:relative}
+.plan.feat::before{content:'Recomendado';position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--gold);color:#fff;padding:4px 16px;font-size:10.5px;letter-spacing:2px;text-transform:uppercase;border-radius:20px}
+.plan h3{font-size:26px;margin-bottom:4px}
+.plan .plan-price{font-family:var(--disp);font-size:40px;margin:10px 0 4px}
+.plan .plan-price small{font-family:var(--body);font-size:13px;color:var(--muted);letter-spacing:.5px}
+.plan .plan-sub{font-size:13.5px;color:var(--muted);margin-bottom:20px}
+.plan ul{list-style:none;margin-bottom:28px;flex:1}
+.plan li{padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.plan li::before{content:'—';color:var(--gold);margin-right:12px}
+.plan li.off{color:var(--muted);text-decoration:line-through}
+@media(max-width:700px){.plans{grid-template-columns:1fr}}
+
+/* photo upload */
+.upload{border:1.5px dashed var(--line);border-radius:2px;background:var(--bg);min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:14px;text-align:center;transition:border .2s;overflow:hidden}
+.upload:hover{border-color:var(--gold)}
+.upload img{max-height:160px;max-width:100%;object-fit:cover;border-radius:2px}
+.upload span{font-size:13.5px;color:var(--muted)}
+.upload .cam{font-family:var(--disp);font-size:26px;color:var(--gold)}
+
+/* plan banner (provider dashboard) */
+.plan-banner{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--gold);padding:18px 24px;border-radius:2px;margin-bottom:26px}
+.plan-banner .grow{flex:1;min-width:220px}
+.plan-banner .serif{font-size:20px}
+.plan-banner p{font-size:13.5px;color:var(--muted)}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:46px 0;text-align:center;color:var(--muted);font-size:13px}
+footer .logo{justify-content:center;margin-bottom:10px;color:var(--ink)}
+
+/* ---------- modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(34,31,27,.5);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;animation:fade .2s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{background:var(--panel);width:100%;max-width:460px;max-height:92vh;overflow-y:auto;padding:42px 38px;border-radius:3px;position:relative;animation:up .25s}
+@keyframes up{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+.modal.wide{max-width:560px}
+.modal h2{font-size:30px;text-align:center;margin-bottom:6px}
+.modal .sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:26px}
+.x{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;color:var(--muted);line-height:1}
+.x:hover{color:var(--ink)}
+label{display:block;font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:500}
+input,select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);padding:12px 14px;font-family:var(--body);font-size:15px;color:var(--ink);border-radius:2px;outline:none;transition:border .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:90px}
+.field{margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.role{border:1px solid var(--line);padding:18px 14px;text-align:center;cursor:pointer;border-radius:2px;transition:all .2s}
+.role:hover{border-color:var(--gold)}
+.role.sel{border-color:var(--gold);background:var(--gold-soft)}
+.role .serif{font-size:19px;display:block;margin-bottom:4px}
+.role span{font-size:12px;color:var(--muted)}
+.switch{text-align:center;margin-top:20px;font-size:14px;color:var(--muted)}
+.switch a{color:var(--gold-dark);cursor:pointer;border-bottom:1px solid var(--gold-dark)}
+.msg{padding:12px 14px;font-size:13.5px;border-radius:2px;margin-bottom:16px}
+.msg.err{background:#f7e9e9;color:var(--red);border:1px solid #e8cccc}
+.msg.ok{background:#eaf2ea;color:var(--green);border:1px solid #cfe0d0}
+
+/* ---------- app / dashboard ---------- */
+.dash-head{padding:56px 0 30px;border-bottom:1px solid var(--line)}
+.dash-head .eyebrow{margin-bottom:8px}
+.dash-head h1{font-size:clamp(30px,4vw,44px)}
+.dash-head p{color:var(--muted);margin-top:6px}
+.tabs{display:flex;gap:4px;margin:34px 0 30px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:none;padding:12px 22px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--ink);border-color:var(--gold)}
+.list{display:flex;flex-direction:column;gap:14px}
+.row{background:var(--panel);border:1px solid var(--line);padding:20px 24px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;border-radius:2px}
+.row .grow{flex:1;min-width:200px}
+.row h3{font-size:20px}
+.row .meta{font-size:13px;color:var(--muted);margin-top:2px}
+.status{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:20px;border:1px solid}
+.status.pending{color:var(--gold-dark);border-color:var(--gold);background:var(--gold-soft)}
+.status.accepted{color:var(--green);border-color:var(--green);background:#eaf2ea}
+.status.declined,.status.cancelled{color:var(--red);border-color:var(--red);background:#f7e9e9}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap}
+.note{background:var(--gold-soft);border:1px solid var(--line);padding:14px 18px;font-size:14px;color:var(--gold-dark);border-radius:2px;margin-bottom:22px}
+
+/* detail modal */
+.detail-img{height:230px;background:linear-gradient(135deg,var(--gold-soft),#efe6d7);margin:-42px -38px 26px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.detail-img img{width:100%;height:100%;object-fit:cover}
+.detail-img .ph{font-family:var(--disp);font-size:60px;color:var(--gold);opacity:.55;font-style:italic}
+
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:13px 26px;font-size:14px;border-radius:2px;z-index:200;animation:up .25s;box-shadow:var(--shadow)}
+
+@media(max-width:900px){
+  .cats{grid-template-columns:repeat(2,1fr)}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:1fr;gap:28px}
+  .band .grid{grid-template-columns:1fr;gap:44px}
+  .nav-links{display:none}
+}
+@media(max-width:600px){
+  .cats{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr}
+  .hero{padding:70px 0 60px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#" onclick="go('home');return false">
+      <span class="ring">W</span> Wedding&nbsp;Planner
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#" onclick="go('home');return false">Inicio</a>
+      <a href="#servicios" onclick="go('home','servicios');return false">Servicios</a>
+      <a href="#como" onclick="go('home','como');return false">Cómo funciona</a>
+      <a href="#planes" id="navPlanes" onclick="go('home','planes');return false">Planes</a>
+    </nav>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="userChip" class="hidden" style="font-size:13px;color:var(--muted)"></span>
+      <button class="iconbtn" id="btnDash" onclick="go('dash')" style="display:none" title="Mi agenda" aria-label="Mi agenda">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 14h3M8 17h6"/></svg>
+      </button>
+      <button class="btn sm" id="btnAuth" onclick="openAuth('login')">Entrar</button>
+      <button class="iconbtn hidden" id="btnOut" onclick="logout()" title="Salir" aria-label="Salir">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HOME ============ -->
+<main id="viewHome">
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">Venues · Wedding Planners · Floristerías · Fotógrafos · Mobiliario</div>
+      <h1>La boda de tus sueños, <em>organizada con calma</em></h1>
+      <div class="hero-rule"></div>
+      <p>Reserva el venue, contrata a tu wedding planner, elige la floristería, encuentra a tu fotógrafo y renta el mobiliario perfecto. Todo en un solo lugar, con elegancia y sin complicaciones.</p>
+      <div class="hero-actions">
+        <button class="btn gold" onclick="openAuth('signup','client')">Organiza tu boda</button>
+        <button class="btn ghost" onclick="openAuth('signup','provider')">Anuncia tu servicio</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="servicios" style="padding-top:30px">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Todo para tu gran día</h2>
+        <p>Explora proveedores verificados en cada categoría esencial de tu boda.</p>
+      </div>
+      <div class="cats">
+        <div class="cat" onclick="filterCat('venue')">
+          <h3>Venues</h3>
+          <p>Reserva el lugar ideal para tu ceremonia, recepción e invitados.</p>
+        </div>
+        <div class="cat" onclick="filterCat('planner')">
+          <h3>Wedding Planners</h3>
+          <p>Expertos que coordinan cada detalle de principio a fin.</p>
+        </div>
+        <div class="cat" onclick="filterCat('florist')">
+          <h3>Floristerías</h3>
+          <p>Ramos, centros de mesa y decoración floral a tu estilo.</p>
+        </div>
+        <div class="cat" onclick="filterCat('photo')">
+          <h3>Fotógrafos</h3>
+          <p>Captura cada momento con fotógrafos y videógrafos profesionales.</p>
+        </div>
+        <div class="cat" onclick="filterCat('furniture')">
+          <h3>Mobiliario</h3>
+          <p>Renta mesas, sillas, salas lounge y más para tu evento.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="catalogo" style="padding-top:20px">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Proveedores destacados</h2>
+        <p>Descubre y contacta a los mejores profesionales para tu boda.</p>
+      </div>
+      <div class="filters">
+        <button class="chip active" data-cat="all" onclick="filterCat('all')">Todos</button>
+        <button class="chip" data-cat="venue" onclick="filterCat('venue')">Venues</button>
+        <button class="chip" data-cat="planner" onclick="filterCat('planner')">Wedding Planners</button>
+        <button class="chip" data-cat="florist" onclick="filterCat('florist')">Floristerías</button>
+        <button class="chip" data-cat="photo" onclick="filterCat('photo')">Fotógrafos</button>
+        <button class="chip" data-cat="furniture" onclick="filterCat('furniture')">Mobiliario</button>
+      </div>
+      <div class="cards" id="cards">
+        <div class="empty"><div class="serif">Cargando proveedores…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="como" style="background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Cómo funciona</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="n">01</div>
+          <h3>Explora</h3>
+          <p>Navega venues, planners, floristerías y mobiliario. Filtra por categoría y encuentra tu estilo.</p>
+        </div>
+        <div class="step">
+          <div class="n">02</div>
+          <h3>Solicita</h3>
+          <p>Crea tu cuenta de pareja y envía tu solicitud con la fecha de tu boda y los detalles de tu evento.</p>
+        </div>
+        <div class="step">
+          <div class="n">03</div>
+          <h3>Celebra</h3>
+          <p>El proveedor confirma tu reserva y coordinan los detalles. Tú solo preocúpate por disfrutar.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="planes">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Planes para proveedores</h2>
+        <p>Empieza gratis y destaca tu negocio cuando estés listo para crecer.</p>
+      </div>
+      <div class="plans">
+        <div class="plan">
+          <h3>Gratis</h3>
+          <div class="plan-price">Q 0 <small>/ mes</small></div>
+          <div class="plan-sub">Para empezar a recibir solicitudes</div>
+          <ul>
+            <li>1 anuncio activo</li>
+            <li>Apareces en el catálogo</li>
+            <li>Recibes solicitudes de parejas</li>
+            <li class="off">Insignia "Destacado"</li>
+            <li class="off">Primeros lugares del catálogo</li>
+          </ul>
+          <button class="btn ghost" onclick="openAuth('signup','provider')">Crear cuenta gratis</button>
+        </div>
+        <div class="plan feat">
+          <h3>Destacado</h3>
+          <div class="plan-price">Q 299 <small>/ mes</small></div>
+          <div class="plan-sub">Para llenar tu agenda de bodas</div>
+          <ul>
+            <li>Anuncios ilimitados</li>
+            <li>Insignia dorada "Destacado"</li>
+            <li>Primeros lugares del catálogo</li>
+            <li>Prioridad en cada categoría</li>
+            <li>Soporte directo</li>
+          </ul>
+          <button class="btn gold" onclick="upgradePlan()">Quiero destacar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap grid">
+      <div>
+        <h2>¿Te vas a <em>casar</em>?</h2>
+        <p>Crea tu cuenta de pareja y gestiona todas tus reservas y solicitudes desde un solo panel.</p>
+        <ul>
+          <li>Reserva el venue para tu ceremonia y recepción</li>
+          <li>Contrata wedding planners, floristerías y fotógrafos</li>
+          <li>Renta mobiliario para tu recepción</li>
+          <li>Da seguimiento a cada solicitud</li>
+        </ul>
+        <button class="btn" onclick="openAuth('signup','client')">Crear cuenta de pareja</button>
+      </div>
+      <div>
+        <h2>¿Ofreces <em>servicios</em> de boda?</h2>
+        <p>Publica tu venue, servicio de wedding planner, floristería, fotografía o renta de mobiliario y recibe solicitudes directas.</p>
+        <ul>
+          <li>Publica anuncios con fotos y precios</li>
+          <li>Recibe solicitudes de parejas interesadas</li>
+          <li>Acepta o declina reservas con un clic</li>
+          <li>Gestiona todo desde tu panel</li>
+        </ul>
+        <button class="btn ghost" onclick="openAuth('signup','provider')">Crear cuenta de proveedor</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ DASHBOARD ============ -->
+<main id="viewDash" class="hidden">
+  <div class="wrap">
+    <div class="dash-head">
+      <div class="eyebrow" id="dashRole"></div>
+      <h1 id="dashName"></h1>
+      <p id="dashSub"></p>
+    </div>
+
+    <!-- provider -->
+    <div id="provPanel" class="hidden">
+      <div class="plan-banner" id="planBanner" style="margin-top:30px"></div>
+      <div class="tabs" style="margin-top:0">
+        <button class="tab active" id="tabL" onclick="provTab('listings')">Mis anuncios</button>
+        <button class="tab" id="tabR" onclick="provTab('requests')">Solicitudes recibidas</button>
+      </div>
+      <div id="provListings">
+        <div style="margin-bottom:22px"><button class="btn gold sm" onclick="openListingForm()">+ Nuevo anuncio</button></div>
+        <div class="list" id="myListings"></div>
+      </div>
+      <div id="provRequests" class="hidden">
+        <div class="list" id="reqList"></div>
+      </div>
+    </div>
+
+    <!-- client -->
+    <div id="clientPanel" class="hidden">
+      <div class="tabs">
+        <button class="tab active">Mis solicitudes y reservas</button>
+      </div>
+      <div class="list" id="myBookings"></div>
+      <div style="margin-top:28px"><button class="btn ghost sm" onclick="go('home','catalogo')">Explorar más proveedores</button></div>
+    </div>
+  </div>
+  <div style="height:80px"></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="logo"><span class="ring">W</span> Wedding Planner</div>
+    <p>Elegancia y calma para el día más importante. · © 2026 Wedding Planner</p>
+  </div>
+</footer>
+
+<!-- ============ ADMIN PLAN MODAL ============ -->
+<div class="overlay hidden" id="adminOverlay">
+  <div class="modal">
+    <button class="x" onclick="closeAdmin()">×</button>
+    <h2>Activar plan Destacado</h2>
+    <p class="sub">Proveedor: <strong id="admEmail"></strong></p>
+    <div id="admMsg"></div>
+    <div style="display:grid;gap:10px">
+      <button class="btn gold" onclick="adminSetPlan(30)">Activar 1 mes (30 días)</button>
+      <button class="btn gold" onclick="adminSetPlan(90)">Activar 3 meses (90 días)</button>
+      <button class="btn gold" onclick="adminSetPlan(365)">Activar 12 meses (365 días)</button>
+      <button class="btn danger" onclick="adminSetPlan(0)">Quitar Destacado (volver a Gratis)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AUTH MODAL ============ -->
+<div class="overlay hidden" id="authOverlay">
+  <div class="modal">
+    <button class="x" onclick="closeAuth()">×</button>
+    <div id="authMsg"></div>
+
+    <div id="loginForm">
+      <h2>Bienvenido de vuelta</h2>
+      <p class="sub">Entra a tu cuenta de Wedding Planner</p>
+      <div class="field"><label>Correo electrónico</label><input type="email" id="liEmail" placeholder="tu@correo.com"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="liPass" placeholder="••••••••"></div>
+      <button class="btn gold" style="width:100%" id="liBtn" onclick="login()">Entrar</button>
+      <p class="switch">¿No tienes cuenta? <a onclick="showAuth('signup')">Regístrate</a></p>
+    </div>
+
+    <div id="signupForm" class="hidden">
+      <h2>Crea tu cuenta</h2>
+      <p class="sub">Elige el tipo de cuenta que necesitas</p>
+      <div class="roles">
+        <div class="role" id="roleClient" onclick="pickRole('client')">
+          <span class="serif">Pareja</span>
+          <span>Reservar y contratar servicios</span>
+        </div>
+        <div class="role" id="roleProvider" onclick="pickRole('provider')">
+          <span class="serif">Proveedor</span>
+          <span>Anunciar venue, planner, flores, fotos o mobiliario</span>
+        </div>
+      </div>
+      <div class="field"><label id="nameLabel">Nombre completo</label><input id="suName" placeholder="Ej. María y José / Venue Casa Blanca"></div>
+      <div class="field"><label>Teléfono (opcional)</label><input id="suPhone" placeholder="+502 5555 5555"></div>
+      <div class="field"><label>Correo electrónico</label><input type="email" id="suEmail" placeholder="tu@correo.com"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="suPass" placeholder="Mínimo 6 caracteres"></div>
+      <button class="btn gold" style="width:100%" id="suBtn" onclick="signup()">Crear cuenta</button>
+      <p class="switch">¿Ya tienes cuenta? <a onclick="showAuth('login')">Entra aquí</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LISTING FORM MODAL ============ -->
+<div class="overlay hidden" id="listingOverlay">
+  <div class="modal wide">
+    <button class="x" onclick="closeListing()">×</button>
+    <h2 id="lfTitle">Nuevo anuncio</h2>
+    <p class="sub">Describe tu servicio para las parejas</p>
+    <div id="lfMsg"></div>
+    <div class="field"><label>Categoría</label>
+      <select id="lfCat">
+        <option value="venue">Venue</option>
+        <option value="planner">Wedding Planner</option>
+        <option value="florist">Floristería</option>
+        <option value="photo">Fotógrafo</option>
+        <option value="furniture">Renta de mobiliario</option>
+      </select>
+    </div>
+    <div class="field"><label>Título del anuncio</label><input id="lfName" placeholder="Ej. Venue Jardines del Lago"></div>
+    <div class="field"><label>Descripción</label><textarea id="lfDesc" placeholder="Describe tu servicio, capacidad, estilo, qué incluye…"></textarea></div>
+    <div class="grid2">
+      <div class="field"><label>Ubicación</label><input id="lfLoc" placeholder="Ej. Antigua Guatemala"></div>
+      <div class="field"><label>Precio desde (Q)</label><input type="number" id="lfPrice" placeholder="5000" min="0"></div>
+    </div>
+    <div class="field"><label>Unidad de precio</label>
+      <select id="lfUnit">
+        <option value="por evento">por evento</option>
+        <option value="por noche">por noche</option>
+        <option value="por persona">por persona</option>
+        <option value="por paquete">por paquete</option>
+      </select>
+    </div>
+    <div class="field"><label>Foto del anuncio</label>
+      <div class="upload" onclick="$('lfFile').click()">
+        <img id="lfPreview" class="hidden" alt="">
+        <div id="lfUpEmpty">
+          <div class="cam">✦</div>
+          <span>Toca aquí para elegir una foto<br>de tu galería o tomar una nueva</span>
+        </div>
+      </div>
+      <input type="file" id="lfFile" accept="image/*" class="hidden" onchange="previewPhoto(this)">
+      <div style="margin-top:6px"><a id="lfRemove" class="hidden" style="font-size:12.5px;color:var(--red);cursor:pointer;border-bottom:1px solid var(--red)" onclick="removePhoto()">Quitar foto</a></div>
+    </div>
+    <button class="btn gold" style="width:100%" id="lfBtn" onclick="saveListing()">Publicar anuncio</button>
+  </div>
+</div>
+
+<!-- ============ DETAIL / BOOKING MODAL ============ -->
+<div class="overlay hidden" id="detailOverlay">
+  <div class="modal wide">
+    <button class="x" onclick="closeDetail()" style="z-index:2;background:rgba(255,255,255,.85);border-radius:50%;width:32px;height:32px">×</button>
+    <div class="detail-img" id="dImg"></div>
+    <div class="eyebrow" id="dCat" style="margin-bottom:6px"></div>
+    <h2 style="text-align:left" id="dTitle"></h2>
+    <p style="color:var(--muted);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin:4px 0 14px" id="dLoc"></p>
+    <p style="font-size:15px;margin-bottom:18px" id="dDesc"></p>
+    <p class="price" style="margin-bottom:24px" id="dPrice"></p>
+    <div id="bookBox" style="border-top:1px solid var(--line);padding-top:22px">
+      <h3 style="font-size:21px;margin-bottom:14px" id="bookTitle">Solicitar reserva</h3>
+      <div id="dMsg"></div>
+      <div class="grid2">
+        <div class="field"><label>Fecha del evento</label><input type="date" id="bkDate"></div>
+        <div class="field"><label>Nº de invitados</label><input type="number" id="bkGuests" placeholder="120" min="1"></div>
+      </div>
+      <div class="field"><label>Mensaje para el proveedor</label><textarea id="bkMsg" placeholder="Cuéntale sobre tu boda, horario, estilo…"></textarea></div>
+      <button class="btn gold" style="width:100%" id="bkBtn" onclick="sendBooking()">Enviar solicitud</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://pnlefnwngmktiykelkdd.supabase.co";
+const SUPABASE_KEY = "sb_publishable_CSElvPJazzOG-GPQAYCpOQ_mFWU0MP6";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CATS = {
+  venue:"Venue", planner:"Wedding Planner", florist:"Floristería", photo:"Fotógrafo", furniture:"Mobiliario"
+};
+const STATUS = { pending:"Pendiente", accepted:"Aceptada", declined:"Declinada", cancelled:"Cancelada" };
+const PLAN_PRICE = "Q 299/mes";
+const CONTACT_EMAIL = "jose1903ace@gmail.com";
+const ADMIN_EMAIL = "jose1903ace@gmail.com";
+const isPremiumProfile = p => !!p && p.plan==='premium' && (!p.plan_expires_at || new Date(p.plan_expires_at) > new Date());
+
+let session = null, profile = null;
+let allListings = [], curCat = "all", curListing = null, editingId = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(t){ const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2600); }
+function msg(id,text,ok){ $(id).innerHTML = text ? `<div class="msg ${ok?'ok':'err'}">${esc(text)}</div>` : ""; }
+const fmtQ = n => n==null ? "" : "Q " + Number(n).toLocaleString('es-GT');
+const fmtDate = d => d ? new Date(d+"T12:00:00").toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'}) : "—";
+
+/* ================= NAV ================= */
+function go(view, anchor){
+  $('viewHome').classList.toggle('hidden', view!=='home');
+  $('viewDash').classList.toggle('hidden', view!=='dash');
+  if(view==='dash'){ renderDash(); window.scrollTo(0,0); }
+  else if(anchor){ setTimeout(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth'}),60); }
+  else window.scrollTo(0,0);
+}
+
+/* ================= AUTH ================= */
+let signupRole = 'client';
+function openAuth(mode, role){
+  if(session){ go('dash'); return; }
+  $('authOverlay').classList.remove('hidden');
+  showAuth(mode||'login');
+  if(role) pickRole(role);
+}
+function closeAuth(){ $('authOverlay').classList.add('hidden'); msg('authMsg',''); }
+function showAuth(mode){
+  $('loginForm').classList.toggle('hidden', mode!=='login');
+  $('signupForm').classList.toggle('hidden', mode!=='signup');
+  msg('authMsg','');
+}
+function pickRole(r){
+  signupRole = r;
+  $('roleClient').classList.toggle('sel', r==='client');
+  $('roleProvider').classList.toggle('sel', r==='provider');
+  $('nameLabel').textContent = r==='provider' ? 'Nombre del negocio' : 'Nombre completo';
+}
+
+async function signup(){
+  const name=$('suName').value.trim(), email=$('suEmail').value.trim(), pass=$('suPass').value, phone=$('suPhone').value.trim();
+  if(!name||!email||!pass){ msg('authMsg','Completa nombre, correo y contraseña.'); return; }
+  $('suBtn').disabled = true;
+  const { data, error } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { full_name:name, role:signupRole, phone } }
+  });
+  $('suBtn').disabled = false;
+  if(error){ msg('authMsg', trErr(error.message)); return; }
+  if(data.session){
+    toast('Cuenta creada. ¡Bienvenido!');
+    closeAuth();
+  } else {
+    msg('authMsg','Cuenta creada. Revisa tu correo para confirmarla y luego entra con tu contraseña.', true);
+    showAuthKeepMsg('login');
+  }
+}
+function showAuthKeepMsg(mode){
+  $('loginForm').classList.toggle('hidden', mode!=='login');
+  $('signupForm').classList.toggle('hidden', mode!=='signup');
+}
+
+async function login(){
+  const email=$('liEmail').value.trim(), pass=$('liPass').value;
+  if(!email||!pass){ msg('authMsg','Ingresa tu correo y contraseña.'); return; }
+  $('liBtn').disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  $('liBtn').disabled = false;
+  if(error){ msg('authMsg', trErr(error.message)); return; }
+  closeAuth();
+  toast('Sesión iniciada');
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  profile = null;
+  go('home');
+}
+
+function trErr(m){
+  if(/Invalid login credentials/i.test(m)) return 'Correo o contraseña incorrectos.';
+  if(/already registered/i.test(m)) return 'Este correo ya tiene una cuenta. Entra con tu contraseña.';
+  if(/at least 6/i.test(m)) return 'La contraseña debe tener al menos 6 caracteres.';
+  if(/valid email/i.test(m)) return 'Ingresa un correo válido.';
+  if(/rate limit|seconds/i.test(m)) return 'Demasiados intentos. Espera un momento e inténtalo de nuevo.';
+  if(/not confirmed/i.test(m)) return 'Confirma tu correo antes de entrar (revisa tu bandeja).';
+  return m;
+}
+
+async function loadProfile(){
+  if(!session){ profile=null; return; }
+  const { data } = await sb.from('wp_profiles').select('*').eq('id', session.user.id).maybeSingle();
+  profile = data;
+  if(!profile){
+    // fallback: create from metadata if trigger didn't run
+    const md = session.user.user_metadata||{};
+    const ins = { id: session.user.id, role: md.role==='provider'?'provider':'client', full_name: md.full_name||session.user.email, phone: md.phone||null, email: session.user.email };
+    const { data: p } = await sb.from('wp_profiles').insert(ins).select().maybeSingle();
+    profile = p || ins;
+  }
+}
+
+function paintAuthUI(){
+  const logged = !!session;
+  $('btnAuth').classList.toggle('hidden', logged);
+  $('btnOut').classList.toggle('hidden', !logged);
+  $('btnDash').style.display = logged ? '' : 'none';
+  $('userChip').classList.toggle('hidden', !logged);
+  if(logged && profile) $('userChip').textContent = profile.full_name;
+  // la sección de planes es para proveedores (y visitantes); se oculta a las parejas
+  const isClient = logged && profile && profile.role === 'client';
+  $('planes').classList.toggle('hidden', isClient);
+  $('navPlanes').classList.toggle('hidden', isClient);
+}
+
+/* ================= LISTINGS (public catalog) ================= */
+async function loadListings(){
+  const { data, error } = await sb.from('wp_listings')
+    .select('*, wp_profiles(full_name, phone, plan, plan_expires_at)')
+    .eq('active', true)
+    .order('created_at', { ascending:false });
+  allListings = error ? [] : (data||[]);
+  allListings.forEach(l => l._feat = isPremiumProfile(l.wp_profiles));
+  allListings.sort((a,b) => (b._feat?1:0) - (a._feat?1:0));
+  renderCards();
+}
+
+function filterCat(cat){
+  curCat = cat;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active', c.dataset.cat===cat));
+  renderCards();
+  document.getElementById('catalogo')?.scrollIntoView({behavior:'smooth'});
+}
+
+function renderCards(){
+  const items = curCat==='all' ? allListings : allListings.filter(l=>l.category===curCat);
+  if(!items.length){
+    $('cards').innerHTML = `<div class="empty"><div class="serif">Aún no hay anuncios en esta categoría</div><p>¿Ofreces este servicio? <a style="color:var(--gold-dark);border-bottom:1px solid var(--gold-dark);cursor:pointer" onclick="openAuth('signup','provider')">Publica tu anuncio</a>.</p></div>`;
+    return;
+  }
+  $('cards').innerHTML = items.map(l=>`
+    <div class="card">
+      <div class="card-img">
+        ${l.image_url ? `<img src="${esc(l.image_url)}" alt="" onerror="this.outerHTML='<div class=ph>${esc((l.title||'W')[0])}</div>'">` : `<div class="ph">${esc((l.title||'W')[0])}</div>`}
+        <span class="card-tag">${CATS[l.category]||l.category}</span>
+        ${l._feat?'<span class="card-feat">★ Destacado</span>':''}
+      </div>
+      <div class="card-body">
+        <h3>${esc(l.title)}</h3>
+        <div class="card-loc">${esc(l.location||'')}</div>
+        <div class="card-desc">${esc(l.description||'')}</div>
+        <div class="card-foot">
+          <div class="price">${l.price_from!=null?`${fmtQ(l.price_from)} <small>${esc(l.price_unit||'')}</small>`:'<small>Precio a consultar</small>'}</div>
+          <button class="btn sm gold" onclick="openDetail('${l.id}')">Ver</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+/* ================= DETAIL + BOOKING ================= */
+function openDetail(id){
+  curListing = allListings.find(l=>l.id===id);
+  if(!curListing) return;
+  const l = curListing;
+  $('dImg').innerHTML = l.image_url ? `<img src="${esc(l.image_url)}" alt="" onerror="this.outerHTML='<div class=ph>${esc((l.title||'W')[0])}</div>'">` : `<div class="ph">${esc((l.title||'W')[0])}</div>`;
+  $('dCat').textContent = (CATS[l.category]||l.category) + (l._feat?' · ★ Destacado':'');
+  $('dTitle').textContent = l.title;
+  $('dLoc').textContent = l.location||'';
+  $('dDesc').textContent = l.description||'';
+  $('dPrice').innerHTML = l.price_from!=null?`${fmtQ(l.price_from)} <small>${esc(l.price_unit||'')}</small>`:'Precio a consultar';
+  $('bookTitle').textContent = l.category==='venue' ? 'Solicitar reserva' : 'Solicitar servicio';
+  msg('dMsg','');
+  const isProvider = profile && profile.role==='provider';
+  $('bookBox').style.display = isProvider ? 'none' : '';
+  $('detailOverlay').classList.remove('hidden');
+}
+function closeDetail(){ $('detailOverlay').classList.add('hidden'); }
+
+async function sendBooking(){
+  if(!session){ closeDetail(); openAuth('signup','client'); return; }
+  if(profile && profile.role==='provider'){ toast('Las cuentas de proveedor no pueden reservar.'); return; }
+  const date=$('bkDate').value, guests=$('bkGuests').value, text=$('bkMsg').value.trim();
+  if(!date){ msg('dMsg','Selecciona la fecha de tu evento.'); return; }
+  $('bkBtn').disabled = true;
+  const { data: booking, error } = await sb.from('wp_bookings').insert({
+    listing_id: curListing.id, client_id: session.user.id,
+    event_date: date, guests: guests?Number(guests):null, message: text||null
+  }).select('id').single();
+  $('bkBtn').disabled = false;
+  if(error){ msg('dMsg','No se pudo enviar la solicitud: '+error.message); return; }
+  // aviso por correo al proveedor (si falla, la solicitud igual queda registrada)
+  if(booking) sb.functions.invoke('wp-notify-booking', { body: { booking_id: booking.id } }).catch(()=>{});
+  closeDetail();
+  toast('Solicitud enviada. El proveedor te responderá pronto.');
+  $('bkDate').value=''; $('bkGuests').value=''; $('bkMsg').value='';
+}
+
+/* ================= DASHBOARD ================= */
+function renderDash(){
+  if(!session || !profile){ go('home'); openAuth('login'); return; }
+  const isProv = profile.role==='provider';
+  $('dashRole').textContent = isProv ? 'Cuenta de proveedor' : 'Cuenta de pareja';
+  $('dashName').textContent = profile.full_name;
+  $('dashSub').textContent = isProv ? 'Gestiona tus anuncios y responde a las solicitudes de las parejas.' : 'Da seguimiento a tus reservas y solicitudes de servicios.';
+  $('provPanel').classList.toggle('hidden', !isProv);
+  $('clientPanel').classList.toggle('hidden', isProv);
+  if(isProv){ renderPlanBanner(); loadMyListings(); loadRequests(); } else loadMyBookings();
+}
+
+function renderPlanBanner(){
+  const prem = isPremiumProfile(profile);
+  if(prem){
+    const hasta = profile.plan_expires_at
+      ? ' hasta el ' + new Date(profile.plan_expires_at).toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'})
+      : '';
+    $('planBanner').innerHTML = `
+      <div class="grow">
+        <div class="serif">★ Plan Destacado activo${hasta}</div>
+        <p>Anuncios ilimitados, insignia dorada y primeros lugares del catálogo.</p>
+      </div>`;
+  } else {
+    $('planBanner').innerHTML = `
+      <div class="grow">
+        <div class="serif">Plan Gratis · 1 anuncio activo</div>
+        <p>Pasa al plan Destacado (${PLAN_PRICE}): anuncios ilimitados, insignia dorada y primeros lugares del catálogo.</p>
+      </div>
+      <button class="btn gold sm" onclick="upgradePlan()">Quiero destacar</button>`;
+  }
+}
+
+function upgradePlan(){
+  if(!session || !profile){ openAuth('signup','provider'); return; }
+  if(profile.role!=='provider'){ toast('El plan Destacado es para cuentas de proveedor.'); return; }
+  if(isPremiumProfile(profile)){ toast('Ya tienes el plan Destacado activo.'); return; }
+  const activarLink = location.origin + location.pathname + '?activar=' + encodeURIComponent(session.user.email);
+  const subject = encodeURIComponent('Quiero el plan Destacado — Wedding Planner');
+  const body = encodeURIComponent(
+    `Hola, quiero activar el plan Destacado (${PLAN_PRICE}) para mi negocio.\n\n`+
+    `Negocio: ${profile.full_name}\nCorreo de mi cuenta: ${session.user.email}\nTeléfono: ${profile.phone||''}\n\n`+
+    `— Botón de activación (solo funciona para el administrador):\n${activarLink}`);
+  location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+}
+
+/* ---- admin: activar plan desde el enlace del correo ---- */
+let pendingActivation = null;
+
+function checkActivationParam(){
+  const email = new URLSearchParams(location.search).get('activar');
+  if(!email) return;
+  pendingActivation = email;
+  history.replaceState(null, '', location.pathname);
+  tryOpenAdmin();
+}
+
+function tryOpenAdmin(){
+  if(!pendingActivation) return;
+  if(!session){
+    openAuth('login');
+    msg('authMsg', 'Entra con tu cuenta de administrador para activar el plan Destacado de: ' + pendingActivation, true);
+    return;
+  }
+  if((session.user.email||'').toLowerCase() !== ADMIN_EMAIL.toLowerCase()){
+    toast('Solo el administrador puede activar planes.');
+    pendingActivation = null;
+    return;
+  }
+  closeAuth();
+  $('admEmail').textContent = pendingActivation;
+  msg('admMsg','');
+  $('adminOverlay').classList.remove('hidden');
+}
+
+function closeAdmin(){ $('adminOverlay').classList.add('hidden'); pendingActivation = null; }
+
+async function adminSetPlan(days){
+  msg('admMsg','');
+  const email = $('admEmail').textContent;
+  const { data, error } = await sb.functions.invoke('wp-admin-plan', { body: { email, days } });
+  if(error || !data || data.ok === false){
+    const code = data?.error || error?.message || 'error';
+    msg('admMsg', code==='no_user' ? 'No existe ninguna cuenta con ese correo.'
+      : code==='no_profile' ? 'Esa cuenta no tiene perfil en la app.'
+      : code==='not_admin' ? 'Solo el administrador puede activar planes.'
+      : 'No se pudo actualizar: '+code);
+    return;
+  }
+  closeAdmin();
+  if(data.plan === 'premium'){
+    const hasta = data.expires ? new Date(data.expires).toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'}) : '';
+    toast(`★ Plan Destacado activado para ${data.name} hasta el ${hasta}`);
+  } else {
+    toast(`${data.name} volvió al plan Gratis.`);
+  }
+  loadListings();
+  if(profile && session && !$('viewDash').classList.contains('hidden')) renderDash();
+}
+
+function provTab(t){
+  $('tabL').classList.toggle('active', t==='listings');
+  $('tabR').classList.toggle('active', t==='requests');
+  $('provListings').classList.toggle('hidden', t!=='listings');
+  $('provRequests').classList.toggle('hidden', t!=='requests');
+}
+
+/* ---- provider: listings CRUD ---- */
+async function loadMyListings(){
+  const { data } = await sb.from('wp_listings').select('*').eq('provider_id', session.user.id).order('created_at',{ascending:false});
+  const items = data||[];
+  $('myListings').innerHTML = items.length ? items.map(l=>`
+    <div class="row">
+      <div class="grow">
+        <h3>${esc(l.title)}</h3>
+        <div class="meta">${CATS[l.category]} · ${esc(l.location||'—')} · ${l.price_from!=null?fmtQ(l.price_from)+' '+esc(l.price_unit||''):'Precio a consultar'}</div>
+      </div>
+      <span class="status ${l.active?'accepted':'cancelled'}">${l.active?'Publicado':'Oculto'}</span>
+      <div class="rowbtns">
+        <button class="btn ghost sm" onclick="openListingForm('${l.id}')">Editar</button>
+        <button class="btn ghost sm" onclick="toggleListing('${l.id}',${!l.active})">${l.active?'Ocultar':'Publicar'}</button>
+        <button class="btn danger sm" onclick="delListing('${l.id}')">Eliminar</button>
+      </div>
+    </div>`).join('') : `<div class="empty"><div class="serif">Aún no tienes anuncios</div><p>Publica tu primer anuncio para empezar a recibir solicitudes.</p></div>`;
+}
+
+let lfExistingImage = null;   // foto ya guardada del anuncio (al editar)
+let lfPhotoRemoved = false;   // el usuario quitó la foto
+
+function openListingForm(id){
+  editingId = id||null;
+  const l = id ? allMyListing(id) : null;
+  $('lfTitle').textContent = id ? 'Editar anuncio' : 'Nuevo anuncio';
+  $('lfBtn').textContent = id ? 'Guardar cambios' : 'Publicar anuncio';
+  $('lfCat').value = l?.category||'venue';
+  $('lfName').value = l?.title||'';
+  $('lfDesc').value = l?.description||'';
+  $('lfLoc').value = l?.location||'';
+  $('lfPrice').value = l?.price_from??'';
+  $('lfUnit').value = l?.price_unit||'por evento';
+  lfExistingImage = l?.image_url||null;
+  lfPhotoRemoved = false;
+  $('lfFile').value = '';
+  paintPhotoBox(lfExistingImage);
+  msg('lfMsg','');
+  $('listingOverlay').classList.remove('hidden');
+}
+
+function paintPhotoBox(src){
+  $('lfPreview').classList.toggle('hidden', !src);
+  $('lfUpEmpty').classList.toggle('hidden', !!src);
+  $('lfRemove').classList.toggle('hidden', !src);
+  if(src) $('lfPreview').src = src;
+}
+
+function previewPhoto(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  lfPhotoRemoved = false;
+  paintPhotoBox(URL.createObjectURL(f));
+}
+
+function removePhoto(){
+  $('lfFile').value = '';
+  lfPhotoRemoved = true;
+  paintPhotoBox(null);
+}
+
+// Reduce la foto (máx 1600 px, JPEG) para que suba rápido desde el celular
+async function compressImage(file){
+  try{
+    const img = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width*scale);
+    canvas.height = Math.round(img.height*scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', .85));
+    return blob || file;
+  }catch(_e){ return file; }
+}
+
+async function uploadPhoto(file){
+  const blob = await compressImage(file);
+  const path = `${session.user.id}/${Date.now()}.jpg`;
+  const { error } = await sb.storage.from('wp-images').upload(path, blob, { contentType:'image/jpeg' });
+  if(error) throw error;
+  return sb.storage.from('wp-images').getPublicUrl(path).data.publicUrl;
+}
+let myListingsCache = [];
+function allMyListing(id){ return myListingsCache.find(x=>x.id===id); }
+function closeListing(){ $('listingOverlay').classList.add('hidden'); }
+
+async function saveListing(){
+  const payload = {
+    category: $('lfCat').value,
+    title: $('lfName').value.trim(),
+    description: $('lfDesc').value.trim()||null,
+    location: $('lfLoc').value.trim()||null,
+    price_from: $('lfPrice').value?Number($('lfPrice').value):null,
+    price_unit: $('lfUnit').value
+  };
+  if(!payload.title){ msg('lfMsg','El anuncio necesita un título.'); return; }
+  $('lfBtn').disabled = true;
+  const newFile = $('lfFile').files && $('lfFile').files[0];
+  if(newFile){
+    $('lfBtn').textContent = 'Subiendo foto…';
+    try{
+      payload.image_url = await uploadPhoto(newFile);
+    }catch(e){
+      $('lfBtn').disabled = false;
+      $('lfBtn').textContent = editingId ? 'Guardar cambios' : 'Publicar anuncio';
+      msg('lfMsg','No se pudo subir la foto: '+(e.message||e)+'. Intenta con otra imagen.');
+      return;
+    }
+    $('lfBtn').textContent = 'Guardando…';
+  } else if(lfPhotoRemoved){
+    payload.image_url = null;
+  } else if(lfExistingImage){
+    payload.image_url = lfExistingImage;
+  } else {
+    payload.image_url = null;
+  }
+  let error;
+  if(editingId){
+    ({ error } = await sb.from('wp_listings').update(payload).eq('id', editingId));
+  } else {
+    payload.provider_id = session.user.id;
+    ({ error } = await sb.from('wp_listings').insert(payload));
+  }
+  $('lfBtn').disabled = false;
+  $('lfBtn').textContent = editingId ? 'Guardar cambios' : 'Publicar anuncio';
+  if(error){
+    msg('lfMsg', /PLAN_LIMIT/.test(error.message)
+      ? `Tu plan Gratis permite 1 anuncio activo. Oculta el otro anuncio o pasa al plan Destacado (${PLAN_PRICE}) para publicar sin límite.`
+      : 'No se pudo guardar: '+error.message);
+    return;
+  }
+  closeListing();
+  toast(editingId?'Anuncio actualizado':'Anuncio publicado');
+  loadMyListings(); loadListings();
+}
+
+async function toggleListing(id, active){
+  const { error } = await sb.from('wp_listings').update({active}).eq('id',id);
+  if(error){
+    toast(/PLAN_LIMIT/.test(error.message)
+      ? 'Tu plan Gratis permite 1 anuncio activo. Oculta el otro o pasa al plan Destacado.'
+      : 'No se pudo actualizar: '+error.message);
+    return;
+  }
+  loadMyListings(); loadListings();
+}
+async function delListing(id){
+  if(!confirm('¿Eliminar este anuncio? Esta acción no se puede deshacer.')) return;
+  await sb.from('wp_listings').delete().eq('id',id);
+  loadMyListings(); loadListings();
+  toast('Anuncio eliminado');
+}
+
+/* ---- provider: incoming requests ---- */
+async function loadRequests(){
+  const { data: mine } = await sb.from('wp_listings').select('*').eq('provider_id', session.user.id).order('created_at',{ascending:false});
+  myListingsCache = mine||[];
+  const ids = myListingsCache.map(l=>l.id);
+  if(!ids.length){ $('reqList').innerHTML = `<div class="empty"><div class="serif">Sin solicitudes todavía</div><p>Publica anuncios para recibir solicitudes.</p></div>`; return; }
+  const { data } = await sb.from('wp_bookings')
+    .select('*, wp_listings(title,category), wp_profiles(full_name,phone,email)')
+    .in('listing_id', ids).order('created_at',{ascending:false});
+  const items = data||[];
+  $('reqList').innerHTML = items.length ? items.map(b=>`
+    <div class="row">
+      <div class="grow">
+        <h3>${esc(b.wp_profiles?.full_name||'Pareja')}</h3>
+        <div class="meta">${esc(b.wp_listings?.title||'')} · ${fmtDate(b.event_date)} · ${b.guests?b.guests+' invitados':'invitados por definir'}</div>
+        <div class="meta">${b.wp_profiles?.phone?'Tel: '+esc(b.wp_profiles.phone)+' · ':''}${b.wp_profiles?.email?`Correo: <a href="mailto:${esc(b.wp_profiles.email)}" style="color:var(--gold-dark)">${esc(b.wp_profiles.email)}</a>`:''}</div>
+        ${b.message?`<div class="meta" style="margin-top:6px;font-style:italic">“${esc(b.message)}”</div>`:''}
+      </div>
+      <span class="status ${b.status}">${STATUS[b.status]||b.status}</span>
+      ${b.status==='pending'?`<div class="rowbtns">
+        <button class="btn green sm" onclick="setStatus('${b.id}','accepted')">Aceptar</button>
+        <button class="btn danger sm" onclick="setStatus('${b.id}','declined')">Declinar</button>
+      </div>`:''}
+    </div>`).join('') : `<div class="empty"><div class="serif">Sin solicitudes todavía</div><p>Cuando una pareja solicite tus servicios aparecerá aquí.</p></div>`;
+}
+
+async function setStatus(id, status){
+  const { error } = await sb.from('wp_bookings').update({status}).eq('id',id);
+  if(error){ toast('No se pudo actualizar: '+error.message); return; }
+  toast(status==='accepted'?'Solicitud aceptada':'Solicitud declinada');
+  loadRequests();
+}
+
+/* ---- client: my bookings ---- */
+async function loadMyBookings(){
+  const { data } = await sb.from('wp_bookings')
+    .select('*, wp_listings(title,category,location, wp_profiles(full_name,phone,email))')
+    .eq('client_id', session.user.id).order('created_at',{ascending:false});
+  const items = data||[];
+  $('myBookings').innerHTML = items.length ? items.map(b=>{
+    const p = b.wp_listings?.wp_profiles;
+    const contacto = p ? `<div class="meta" style="margin-top:6px;${b.status==='accepted'?'color:var(--green)':''}">Contacto del proveedor: ${esc(p.full_name)}${p.phone?' · Tel: '+esc(p.phone):''}${p.email?` · <a href="mailto:${esc(p.email)}" style="color:var(--gold-dark)">${esc(p.email)}</a>`:''}</div>` : '';
+    return `
+    <div class="row">
+      <div class="grow">
+        <h3>${esc(b.wp_listings?.title||'Anuncio eliminado')}</h3>
+        <div class="meta">${CATS[b.wp_listings?.category]||''} · ${fmtDate(b.event_date)} · ${b.guests?b.guests+' invitados':''}</div>
+        ${contacto}
+      </div>
+      <span class="status ${b.status}">${STATUS[b.status]||b.status}</span>
+      ${b.status==='pending'?`<button class="btn ghost sm" onclick="cancelBooking('${b.id}')">Cancelar</button>`:''}
+    </div>`;}).join('') : `<div class="empty"><div class="serif">Aún no tienes solicitudes</div><p>Explora el catálogo y solicita tu primera reserva.</p></div>`;
+}
+
+async function cancelBooking(id){
+  await sb.from('wp_bookings').update({status:'cancelled'}).eq('id',id);
+  loadMyBookings();
+  toast('Solicitud cancelada');
+}
+
+/* ================= INIT ================= */
+sb.auth.onAuthStateChange(async (_e, s) => {
+  session = s;
+  await loadProfile();
+  paintAuthUI();
+  if(session && !$('viewDash').classList.contains('hidden')) renderDash();
+  if(session && pendingActivation) tryOpenAdmin();
+});
+
+(async function init(){
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  await loadProfile();
+  paintAuthUI();
+  loadListings();
+  checkActivationParam();
+})();
+</script>
+
+<script>
+/* ================= MODO DEMOSTRACIÓN =================
+   500 proveedores ficticios (80 Destacados) generados con semilla fija.
+   No se toca la base de datos real. */
+(function(){
+  // banner
+  const bar = document.createElement('div');
+  bar.style.cssText = 'background:#221f1b;color:#e8c88a;text-align:center;padding:9px 14px;font-size:12.5px;letter-spacing:1.2px;text-transform:uppercase';
+  bar.textContent = 'Demostración · 500 proveedores ficticios (80 destacados) · los datos no son reales';
+  document.body.prepend(bar);
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  const rnd = mulberry32(20260728);
+  const pick = arr => arr[Math.floor(rnd()*arr.length)];
+  const between = (a,b) => Math.round((a + rnd()*(b-a))/50)*50;
+
+  const NAMES = {
+    venue:[['Hacienda','Finca','Hotel','Casa','Jardín','Quinta','Villa','Rancho','Terraza','Castillo'],
+           ['del Lago','Real','de las Flores','San José','Vista Hermosa','Los Olivos','Santa Elena','del Bosque','La Aurora','de Antigua','del Valle','Las Luces','Monte Alto','del Río']],
+    planner:[['Eventos','Bodas','Momentos','Detalles','Celebraciones','Sueños','Alta Boda','Coordina'],
+           ['Alejandra','Lucía','Fernanda','Gabriela','Sofía','Valeria','Mariana','Isabel','Daniela','Andrea','Regina','Camila','Paola','Renata']],
+    florist:[['Florería','Flores','Pétalos','Jardín','Rosas','Botánica','Ramos'],
+           ['Jazmín','del Campo','Blanca','de Mayo','Silvestre','Encanto','Primavera','del Sol','Azahar','Magnolia','Gardenia','Alhelí','Dalia','Violeta']],
+    photo:[['Estudio','Foto','Lente','Captura','Momentos','Luz','Enfoque'],
+           ['Dorada','Eterna','de Plata','Novia','Clásico','Urbano','Natural','Films','Arte','Vintage','Aurora','Infinito','Sepia','Andino']],
+    furniture:[['Mobiliario','Rentas','Salas','Mesas & Sillas','Decorentas','Montajes','Lounge'],
+           ['Élite','Premium','del Sur','Imperial','Moderno','Rústico','Fiesta','Central','GT','Deluxe','Colonial','Boutique','Real','Selecto']]
+  };
+  const DESC = {
+    venue:['Espacio para ceremonias y recepciones con jardines, salón techado y estacionamiento. Paquetes con montaje incluido.',
+           'Vista panorámica, capacidad para grandes celebraciones y áreas verdes para tu ceremonia al aire libre.',
+           'Ambiente colonial con patios, fuentes y salón para recepción. Incluye coordinación el día del evento.'],
+    planner:['Coordinación integral de tu boda: proveedores, cronograma, presupuesto y logística del gran día.',
+           'Planificación parcial o total con diseño de concepto y estilo a tu medida. Acompañamiento en cada detalle.',
+           'Especialistas en bodas de destino y celebraciones íntimas. Nos encargamos de todo para que tú disfrutes.'],
+    florist:['Ramos de novia, centros de mesa, arcos y decoración floral completa con flores frescas de altura.',
+           'Diseño floral artesanal con flores de temporada. Estilos románticos, silvestres y modernos.',
+           'Decoración floral para ceremonia y recepción, con propuesta a la medida de tu paleta de colores.'],
+    photo:['Fotografía de bodas estilo editorial y natural. Cobertura completa y galería digital entregada.',
+           'Foto y video cinematográfico: preparativos, ceremonia y recepción, con tomas aéreas de dron.',
+           'Sesión pre-boda incluida, álbum fino impreso y entrega express de recuerdos para compartir.'],
+    furniture:['Renta de sillas tiffany, mesas imperiales, salas lounge, pistas de baile y mantelería premium.',
+           'Mobiliario vintage y rústico: mesas de madera, bancas, candelabros y vajilla artesanal.',
+           'Montaje y desmontaje incluidos. Carpas, iluminación cálida y mobiliario para cualquier estilo.']
+  };
+  const LOC = ['Ciudad de Guatemala','Antigua Guatemala','Quetzaltenango','Panajachel','Sololá','Escuintla','Cobán','Huehuetenango','Chimaltenango','Mixco','Retalhuleu','Mazatenango','Jalapa','Zacapa','San Lucas Sacatepéquez','Amatitlán'];
+  const PRICE = { venue:[8000,60000,'por evento'], planner:[4000,20000,'por paquete'], florist:[1500,8000,'por evento'], photo:[3000,15000,'por evento'], furniture:[2000,12000,'por evento'] };
+  const KEYS = ['venue','planner','florist','photo','furniture'];
+
+  const used = new Set();
+  function makeTitle(cat){
+    for(let i=0;i<30;i++){
+      const t = pick(NAMES[cat][0]) + ' ' + pick(NAMES[cat][1]);
+      if(!used.has(t)){ used.add(t); return t; }
+    }
+    let n=2, base = pick(NAMES[cat][0]) + ' ' + pick(NAMES[cat][1]);
+    while(used.has(base+' '+n)) n++;
+    used.add(base+' '+n); return base+' '+n;
+  }
+
+  const demo = [];
+  for(let i=0;i<500;i++){
+    const cat = pick(KEYS);
+    const [lo,hi,unit] = PRICE[cat];
+    demo.push({
+      id: 'demo-'+i, category: cat, title: makeTitle(cat),
+      description: pick(DESC[cat]), location: pick(LOC),
+      price_from: between(lo,hi), price_unit: unit, image_url: null,
+      active: true, _feat: false,
+      wp_profiles: { full_name: 'Proveedor demo', phone: '+502 5555 0000', plan: 'free' }
+    });
+  }
+  // 80 Destacados al azar
+  const idx = [...demo.keys()];
+  for(let i=idx.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+  idx.slice(0,80).forEach(i=>{ demo[i]._feat = true; demo[i].wp_profiles.plan='premium'; });
+  demo.sort((a,b)=>(b._feat?1:0)-(a._feat?1:0));
+
+  // reemplazar la carga real por los datos demo
+  let shown = 30;
+  loadListings = async function(){ allListings = demo; renderCards(); };
+  const CHIP_LABEL = { all:'Todos', venue:'Venues', planner:'Wedding Planners', florist:'Floristerías', photo:'Fotógrafos', furniture:'Mobiliario' };
+  filterCat = function(cat){
+    curCat = cat; shown = 30;
+    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active', c.dataset.cat===cat));
+    renderCards();
+    document.getElementById('catalogo')?.scrollIntoView({behavior:'smooth'});
+  };
+  renderCards = function(){
+    const items = curCat==='all' ? allListings : allListings.filter(l=>l.category===curCat);
+    // contadores en los filtros
+    document.querySelectorAll('.chip').forEach(c=>{
+      const k = c.dataset.cat;
+      const n = k==='all' ? allListings.length : allListings.filter(l=>l.category===k).length;
+      c.textContent = CHIP_LABEL[k] + ' (' + n + ')';
+    });
+    const page = items.slice(0, shown);
+    const more = items.length - page.length;
+    $('cards').innerHTML = page.map(l=>`
+      <div class="card">
+        <div class="card-img">
+          <div class="ph">${esc((l.title||'W')[0])}</div>
+          <span class="card-tag">${CATS[l.category]||l.category}</span>
+          ${l._feat?'<span class="card-feat">★ Destacado</span>':''}
+        </div>
+        <div class="card-body">
+          <h3>${esc(l.title)}</h3>
+          <div class="card-loc">${esc(l.location||'')}</div>
+          <div class="card-desc">${esc(l.description||'')}</div>
+          <div class="card-foot">
+            <div class="price">${fmtQ(l.price_from)} <small>${esc(l.price_unit||'')}</small></div>
+            <button class="btn sm gold" onclick="openDetail('${l.id}')">Ver</button>
+          </div>
+        </div>
+      </div>`).join('') + (more>0?`
+      <div class="empty" style="padding:30px 20px">
+        <button class="btn ghost" onclick="shown+=30;renderCards()">Mostrar más (${more} restantes)</button>
+      </div>`:'');
+  };
+  Object.defineProperty(window,'shown',{ get:()=>shown, set:v=>{shown=v} });
+  sendBooking = function(){ msg('dMsg','Esta es una página de demostración: los proveedores no son reales.'); };
+  // pintar ya (por si la carga real terminó antes)
+  loadListings();
+})();
+</script>
+</body>
+</html>
