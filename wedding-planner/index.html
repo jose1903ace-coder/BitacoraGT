@@ -141,6 +141,19 @@ header{position:sticky;top:0;z-index:50;background:rgba(250,248,244,.92);backdro
 .plan li.off{color:var(--muted);text-decoration:line-through}
 @media(max-width:700px){.plans{grid-template-columns:1fr}}
 
+/* reviews */
+.card-rating{font-size:13px;color:var(--gold-dark);letter-spacing:.5px}
+.card-rating small{color:var(--muted)}
+.rev{border-bottom:1px solid var(--line);padding:12px 0}
+.rev:last-child{border-bottom:none}
+.rev .stars{color:var(--gold);font-size:14px;letter-spacing:2px}
+.rev .who{font-size:13px;color:var(--muted);margin-top:2px}
+.rev p{font-size:14px;margin-top:6px}
+.stars-pick{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
+.stars-pick button{background:none;border:none;font-size:34px;color:var(--line);transition:color .15s;padding:2px}
+.stars-pick button.on{color:var(--gold)}
+.rev-cta{font-size:13px;color:var(--gold-dark);border-bottom:1px solid var(--gold-dark);cursor:pointer}
+
 /* photo upload */
 .upload{border:1.5px dashed var(--line);border-radius:2px;background:var(--bg);min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:14px;text-align:center;transition:border .2s;overflow:hidden}
 .upload:hover{border-color:var(--gold)}
@@ -466,6 +479,22 @@ textarea{resize:vertical;min-height:90px}
   </div>
 </footer>
 
+<!-- ============ REVIEW MODAL ============ -->
+<div class="overlay hidden" id="reviewOverlay">
+  <div class="modal">
+    <button class="x" onclick="closeReview()">×</button>
+    <h2>Tu reseña</h2>
+    <p class="sub" id="rvListing"></p>
+    <div id="rvMsg"></div>
+    <div class="stars-pick" id="rvStars">
+      <button onclick="pickStar(1)">★</button><button onclick="pickStar(2)">★</button><button onclick="pickStar(3)">★</button><button onclick="pickStar(4)">★</button><button onclick="pickStar(5)">★</button>
+    </div>
+    <div class="field"><label>Comentario corto (opcional, máx. 300)</label><textarea id="rvText" maxlength="300" placeholder="¿Cómo fue tu experiencia con este proveedor?"></textarea></div>
+    <button class="btn gold" style="width:100%" id="rvBtn" onclick="saveReview()">Publicar reseña</button>
+    <p class="switch hidden" id="rvDelWrap"><a onclick="deleteReview()">Eliminar mi reseña</a></p>
+  </div>
+</div>
+
 <!-- ============ ADMIN PLAN MODAL ============ -->
 <div class="overlay hidden" id="adminOverlay">
   <div class="modal">
@@ -575,6 +604,11 @@ textarea{resize:vertical;min-height:90px}
     <p style="color:var(--muted);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin:4px 0 14px" id="dLoc"></p>
     <p style="font-size:15px;margin-bottom:18px" id="dDesc"></p>
     <p class="price" style="margin-bottom:24px" id="dPrice"></p>
+    <div style="border-top:1px solid var(--line);padding-top:22px;margin-bottom:24px">
+      <h3 style="font-size:21px;margin-bottom:6px">Reseñas <span id="revAvg" style="font-size:15px;color:var(--gold-dark)"></span></h3>
+      <div id="revList" style="margin-bottom:12px"><span style="font-size:13.5px;color:var(--muted)">Cargando reseñas…</span></div>
+      <a class="rev-cta" id="revWrite" onclick="openReviewFromDetail()">Escribir una reseña</a>
+    </div>
     <div id="bookBox" style="border-top:1px solid var(--line);padding-top:22px">
       <h3 style="font-size:21px;margin-bottom:14px" id="bookTitle">Solicitar reserva</h3>
       <div id="dMsg"></div>
@@ -720,11 +754,25 @@ function paintAuthUI(){
 }
 
 /* ================= LISTINGS (public catalog) ================= */
+let reviewsAgg = {};
+async function loadReviewsAgg(){
+  const { data } = await sb.from('wp_reviews').select('listing_id, rating');
+  reviewsAgg = {};
+  (data||[]).forEach(r=>{
+    const a = reviewsAgg[r.listing_id] || (reviewsAgg[r.listing_id] = {sum:0,count:0});
+    a.sum += r.rating; a.count++;
+  });
+}
+const fmtAvg = id => { const a=reviewsAgg[id]; return a ? (a.sum/a.count).toFixed(1) : null; };
+
 async function loadListings(){
-  const { data, error } = await sb.from('wp_listings')
-    .select('*, wp_profiles(full_name, phone, plan, plan_expires_at)')
-    .eq('active', true)
-    .order('created_at', { ascending:false });
+  const [{ data, error }] = await Promise.all([
+    sb.from('wp_listings')
+      .select('*, wp_profiles(full_name, phone, plan, plan_expires_at)')
+      .eq('active', true)
+      .order('created_at', { ascending:false }),
+    loadReviewsAgg()
+  ]);
   allListings = error ? [] : (data||[]);
   allListings.forEach(l => l._feat = isPremiumProfile(l.wp_profiles));
   allListings.sort((a,b) => (b._feat?1:0) - (a._feat?1:0));
@@ -801,6 +849,7 @@ function renderCards(){
       <div class="card-body">
         <h3>${esc(l.title)}</h3>
         <div class="card-loc">${esc(l.location||'')}</div>
+        ${reviewsAgg[l.id]?`<div class="card-rating">★ ${fmtAvg(l.id)} <small>(${reviewsAgg[l.id].count} ${reviewsAgg[l.id].count===1?'reseña':'reseñas'})</small></div>`:''}
         <div class="card-desc">${esc(l.description||'')}</div>
         <div class="card-foot">
           <div class="price">${l.price_from!=null?`${fmtQ(l.price_from)} <small>${esc(l.price_unit||'')}</small>`:'<small>Precio a consultar</small>'}</div>
@@ -828,9 +877,100 @@ function openDetail(id){
   msg('dMsg','');
   const isProvider = profile && profile.role==='provider';
   $('bookBox').style.display = isProvider ? 'none' : '';
+  $('revWrite').style.display = isProvider ? 'none' : '';
+  loadDetailReviews();
   $('detailOverlay').classList.remove('hidden');
 }
 function closeDetail(){ $('detailOverlay').classList.add('hidden'); }
+
+/* ---- reseñas ---- */
+const starsOf = n => '★'.repeat(n) + '☆'.repeat(5-n);
+
+async function loadDetailReviews(){
+  const id = curListing.id;
+  const a = reviewsAgg[id];
+  $('revAvg').textContent = a ? `· ★ ${fmtAvg(id)} (${a.count})` : '';
+  const { data } = await sb.from('wp_reviews')
+    .select('rating, comment, created_at, wp_profiles(full_name)')
+    .eq('listing_id', id).order('created_at',{ascending:false}).limit(30);
+  const items = data||[];
+  if(curListing.id !== id) return;
+  $('revList').innerHTML = items.length ? items.map(r=>`
+    <div class="rev">
+      <div class="stars">${starsOf(r.rating)}</div>
+      <div class="who">${esc(r.wp_profiles?.full_name||'Pareja')} · ${new Date(r.created_at).toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'})}</div>
+      ${r.comment?`<p>${esc(r.comment)}</p>`:''}
+    </div>`).join('')
+    : `<span style="font-size:13.5px;color:var(--muted)">Aún no hay reseñas. Sé la primera pareja en contar su experiencia.</span>`;
+}
+
+let rvListingId = null, rvListingTitle = '', rvRating = 0, rvExisting = null;
+
+function pickStar(n){
+  rvRating = n;
+  document.querySelectorAll('#rvStars button').forEach((b,i)=>b.classList.toggle('on', i < n));
+}
+
+function openReviewFromDetail(){
+  if(!session){ closeDetail(); openAuth('signup','client'); return; }
+  if(profile && profile.role==='provider'){ toast('Las reseñas las escriben las parejas.'); return; }
+  openReview(curListing.id, curListing.title);
+}
+
+async function openReview(listingId, title){
+  rvListingId = listingId; rvListingTitle = title;
+  rvRating = 0; rvExisting = null;
+  $('rvListing').textContent = title;
+  $('rvText').value = '';
+  pickStar(0);
+  msg('rvMsg','');
+  $('rvDelWrap').classList.add('hidden');
+  $('rvBtn').textContent = 'Publicar reseña';
+  $('reviewOverlay').classList.remove('hidden');
+  const { data } = await sb.from('wp_reviews').select('*')
+    .eq('listing_id', listingId).eq('client_id', session.user.id).maybeSingle();
+  if(data){
+    rvExisting = data;
+    pickStar(data.rating);
+    $('rvText').value = data.comment||'';
+    $('rvBtn').textContent = 'Guardar cambios';
+    $('rvDelWrap').classList.remove('hidden');
+  }
+}
+function closeReview(){ $('reviewOverlay').classList.add('hidden'); }
+
+async function saveReview(){
+  if(!rvRating){ msg('rvMsg','Elige una calificación de 1 a 5 estrellas.'); return; }
+  $('rvBtn').disabled = true;
+  const { error } = await sb.from('wp_reviews').upsert({
+    listing_id: rvListingId, client_id: session.user.id,
+    rating: rvRating, comment: $('rvText').value.trim()||null
+  }, { onConflict: 'listing_id,client_id' });
+  $('rvBtn').disabled = false;
+  if(error){
+    msg('rvMsg', /row-level security|42501/i.test(error.message||error.code)
+      ? 'Solo puedes reseñar servicios que hayas contratado (con solicitud aceptada por el proveedor).'
+      : 'No se pudo guardar: '+error.message);
+    return;
+  }
+  closeReview();
+  toast(rvExisting ? 'Reseña actualizada' : '★ ¡Gracias por tu reseña!');
+  await loadReviewsAgg();
+  renderCards();
+  if(!$('detailOverlay').classList.contains('hidden') && curListing?.id===rvListingId) loadDetailReviews();
+  if(!$('viewDash').classList.contains('hidden') && profile?.role==='client') loadMyBookings();
+}
+
+async function deleteReview(){
+  if(!rvExisting) return;
+  await sb.from('wp_reviews').delete().eq('id', rvExisting.id);
+  closeReview();
+  toast('Reseña eliminada');
+  await loadReviewsAgg();
+  renderCards();
+  if(!$('detailOverlay').classList.contains('hidden') && curListing?.id===rvListingId) loadDetailReviews();
+  if(!$('viewDash').classList.contains('hidden') && profile?.role==='client') loadMyBookings();
+}
 
 async function sendBooking(){
   if(!session){ closeDetail(); openAuth('signup','client'); return; }
@@ -1162,6 +1302,7 @@ async function loadMyBookings(){
       </div>
       <span class="status ${b.status}">${STATUS[b.status]||b.status}</span>
       ${b.status==='pending'?`<button class="btn ghost sm" onclick="cancelBooking('${b.id}')">Cancelar</button>`:''}
+      ${b.status==='accepted'&&b.wp_listings?`<button class="btn gold sm" onclick="openReview('${b.listing_id}','${esc(b.wp_listings.title).replace(/'/g,"\\'")}')">★ Reseñar</button>`:''}
     </div>`;}).join('') : `<div class="empty"><div class="serif">Aún no tienes solicitudes</div><p>Explora el catálogo y solicita tu primera reserva.</p></div>`;
 }
 
