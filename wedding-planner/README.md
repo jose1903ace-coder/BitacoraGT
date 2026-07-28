@@ -18,16 +18,6 @@ Pages, Netlify, etc. El backend (cuentas, anuncios y reservas) es Supabase.
   fotógrafo o mobiliario) con descripción, ubicación, precio y foto; recibe solicitudes y
   las acepta o declina desde su panel.
 
-## Cuentas de demostración
-
-| Cuenta | Correo | Contraseña |
-|---|---|---|
-| Proveedor | proveedor@demo.com | demo123456 |
-| Pareja | pareja@demo.com | demo123456 |
-
-Hay 10 anuncios de ejemplo publicados por la cuenta de proveedor demo (2 por
-categoría).
-
 ## Backend (Supabase)
 
 - Proyecto: `pnlefnwngmktiykelkdd` (la app usa la clave *publishable*, segura
