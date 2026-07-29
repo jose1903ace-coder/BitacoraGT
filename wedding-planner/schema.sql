@@ -2,7 +2,8 @@
 -- Proyecto: pnlefnwngmktiykelkdd (aplicado como migraciones:
 --   wedding_planner_schema, wp_lock_down_trigger_fn, wp_rename_hotel_to_venue,
 --   wp_add_photo_category, wp_provider_plans, wp_admin_set_plan_rpc,
---   wp_images_bucket, wp_profile_email, wp_reviews, wp_availability)
+--   wp_images_bucket, wp_profile_email, wp_reviews, wp_availability,
+--   wp_provider_verification, wp_notify_admin_new_provider)
 -- Este archivo es una copia de referencia del esquema en producción.
 
 create table if not exists public.wp_profiles (
@@ -11,10 +12,23 @@ create table if not exists public.wp_profiles (
   full_name text not null,
   phone text,
   email text,
+  address text,
+  website text,
+  nit text,
+  business_photo_url text,
+  verified boolean not null default false,
+  verified_at timestamptz,
   plan text not null default 'free' check (plan in ('free','premium')),
   plan_expires_at timestamptz,
   created_at timestamptz not null default now()
 );
+-- Verificación: los proveedores nacen con verified=false y sus anuncios no
+-- aparecen en el catálogo hasta que el administrador los aprueba (RPC
+-- wp_admin_set_verified vía edge function wp-admin-verify). Al registrarse un
+-- proveedor, un trigger (wp_notify_admin_new_provider, con pg_net + Brevo)
+-- envía al administrador un correo con los datos y el enlace de aprobación
+-- ?verificar=<correo>. Las columnas verified/plan están protegidas contra
+-- cambios del propio usuario (trigger wp_protect_plan).
 
 create table if not exists public.wp_listings (
   id uuid primary key default gen_random_uuid(),

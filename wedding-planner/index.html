@@ -466,14 +466,15 @@ textarea{resize:vertical;min-height:90px}
 
     <!-- provider -->
     <div id="provPanel" class="hidden">
-      <div class="plan-banner" id="planBanner" style="margin-top:30px"></div>
+      <div class="plan-banner hidden" id="verifBanner" style="margin-top:30px;border-color:var(--red)"></div>
+      <div class="plan-banner" id="planBanner" style="margin-top:14px"></div>
       <div class="tabs" style="margin-top:0">
         <button class="tab active" id="tabL" onclick="provTab('listings')">Mis anuncios</button>
         <button class="tab" id="tabR" onclick="provTab('requests')">Solicitudes recibidas</button>
         <button class="tab" id="tabA" onclick="provTab('avail')">Disponibilidad</button>
       </div>
       <div id="provListings">
-        <div style="margin-bottom:22px"><button class="btn gold sm" onclick="openListingForm()">+ Nuevo anuncio</button></div>
+        <div style="margin-bottom:22px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn gold sm" onclick="openListingForm()">+ Nuevo anuncio</button><button class="btn ghost sm" onclick="openBizForm()">Mi negocio</button></div>
         <div class="list" id="myListings"></div>
       </div>
       <div id="provRequests" class="hidden">
@@ -505,6 +506,31 @@ textarea{resize:vertical;min-height:90px}
   </div>
 </footer>
 
+<!-- ============ BUSINESS PROFILE MODAL ============ -->
+<div class="overlay hidden" id="bizOverlay">
+  <div class="modal wide">
+    <button class="x" onclick="closeBiz()">×</button>
+    <h2>Mi negocio</h2>
+    <p class="sub">Estos datos ayudan a verificar tu cuenta y dan confianza a las parejas</p>
+    <div id="bizMsg"></div>
+    <div class="field"><label>Foto del negocio</label>
+      <div class="upload" onclick="$('bizFile').click()">
+        <img id="bizPreview" class="hidden" alt="">
+        <div id="bizUpEmpty">
+          <div class="cam">✦</div>
+          <span>Toca aquí para elegir la foto de tu local o negocio</span>
+        </div>
+      </div>
+      <input type="file" id="bizFile" accept="image/*" class="hidden" onchange="previewBizPhoto(this)">
+    </div>
+    <div class="field"><label>Teléfono (WhatsApp)</label><input id="bizPhone" placeholder="+502 5555 5555"></div>
+    <div class="field"><label>Dirección del negocio</label><input id="bizAddr" placeholder="Ej. 5a avenida 4-32 zona 1, Antigua Guatemala"></div>
+    <div class="field"><label>Instagram, Facebook o sitio web</label><input id="bizWeb" placeholder="Ej. instagram.com/tunegocio"></div>
+    <div class="field"><label>NIT (opcional)</label><input id="bizNit" placeholder="Ej. 1234567-8"></div>
+    <button class="btn gold" style="width:100%" id="bizBtn" onclick="saveBiz()">Guardar</button>
+  </div>
+</div>
+
 <!-- ============ REVIEW MODAL ============ -->
 <div class="overlay hidden" id="reviewOverlay">
   <div class="modal">
@@ -518,6 +544,20 @@ textarea{resize:vertical;min-height:90px}
     <div class="field"><label>Comentario corto (opcional, máx. 300)</label><textarea id="rvText" maxlength="300" placeholder="¿Cómo fue tu experiencia con este proveedor?"></textarea></div>
     <button class="btn gold" style="width:100%" id="rvBtn" onclick="saveReview()">Publicar reseña</button>
     <p class="switch hidden" id="rvDelWrap"><a onclick="deleteReview()">Eliminar mi reseña</a></p>
+  </div>
+</div>
+
+<!-- ============ ADMIN VERIFY MODAL ============ -->
+<div class="overlay hidden" id="verifyOverlay">
+  <div class="modal">
+    <button class="x" onclick="closeVerify()">×</button>
+    <h2>Verificar proveedor</h2>
+    <p class="sub">Proveedor: <strong id="verEmail"></strong></p>
+    <div id="verMsg"></div>
+    <div style="display:grid;gap:10px">
+      <button class="btn gold" onclick="adminSetVerified(true)">✓ Aprobar proveedor</button>
+      <button class="btn danger" onclick="adminSetVerified(false)">Quitar verificación</button>
+    </div>
   </div>
 </div>
 
@@ -566,7 +606,13 @@ textarea{resize:vertical;min-height:90px}
         </div>
       </div>
       <div class="field"><label id="nameLabel">Nombre completo</label><input id="suName" placeholder="Ej. María y José / Venue Casa Blanca"></div>
-      <div class="field"><label>Teléfono (opcional)</label><input id="suPhone" placeholder="+502 5555 5555"></div>
+      <div class="field"><label id="phoneLabel">Teléfono (opcional)</label><input id="suPhone" placeholder="+502 5555 5555"></div>
+      <div id="provFields" class="hidden">
+        <div class="field"><label>Dirección del negocio</label><input id="suAddr" placeholder="Ej. 5a avenida 4-32 zona 1, Antigua Guatemala"></div>
+        <div class="field"><label>Instagram, Facebook o sitio web</label><input id="suWeb" placeholder="Ej. instagram.com/tunegocio"></div>
+        <div class="field"><label>NIT (opcional)</label><input id="suNit" placeholder="Ej. 1234567-8"></div>
+        <div class="msg ok" style="font-size:12.5px">Tu cuenta será revisada por nuestro equipo antes de que tus anuncios aparezcan en el catálogo. Al entrar podrás agregar la foto de tu negocio.</div>
+      </div>
       <div class="field"><label>Correo electrónico</label><input type="email" id="suEmail" placeholder="tu@correo.com"></div>
       <div class="field"><label>Contraseña</label><input type="password" id="suPass" placeholder="Mínimo 6 caracteres"></div>
       <button class="btn gold" style="width:100%" id="suBtn" onclick="signup()">Crear cuenta</button>
@@ -627,7 +673,8 @@ textarea{resize:vertical;min-height:90px}
     <div class="detail-img" id="dImg"></div>
     <div class="eyebrow" id="dCat" style="margin-bottom:6px"></div>
     <h2 style="text-align:left" id="dTitle"></h2>
-    <p style="color:var(--muted);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin:4px 0 14px" id="dLoc"></p>
+    <p style="color:var(--muted);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin:4px 0 6px" id="dLoc"></p>
+    <p style="font-size:13px;color:var(--green);margin:0 0 14px" id="dTrust"></p>
     <p style="font-size:15px;margin-bottom:18px" id="dDesc"></p>
     <p class="price" style="margin-bottom:24px" id="dPrice"></p>
     <div style="border-top:1px solid var(--line);padding-top:22px;margin-bottom:24px">
@@ -650,6 +697,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>Mensaje para el proveedor</label><textarea id="bkMsg" placeholder="Cuéntale sobre tu boda, horario, estilo…"></textarea></div>
       <button class="btn gold" style="width:100%" id="bkBtn" onclick="sendBooking()">Enviar solicitud</button>
     </div>
+    <p style="text-align:center;margin-top:18px"><a style="font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);cursor:pointer" onclick="reportListing()">Reportar este anuncio</a></p>
   </div>
 </div>
 
@@ -706,15 +754,26 @@ function pickRole(r){
   $('roleClient').classList.toggle('sel', r==='client');
   $('roleProvider').classList.toggle('sel', r==='provider');
   $('nameLabel').textContent = r==='provider' ? 'Nombre del negocio' : 'Nombre completo';
+  $('phoneLabel').textContent = r==='provider' ? 'Teléfono (WhatsApp)' : 'Teléfono (opcional)';
+  $('provFields').classList.toggle('hidden', r!=='provider');
 }
 
 async function signup(){
   const name=$('suName').value.trim(), email=$('suEmail').value.trim(), pass=$('suPass').value, phone=$('suPhone').value.trim();
   if(!name||!email||!pass){ msg('authMsg','Completa nombre, correo y contraseña.'); return; }
+  const meta = { full_name:name, role:signupRole, phone };
+  if(signupRole==='provider'){
+    meta.address = $('suAddr').value.trim();
+    meta.website = $('suWeb').value.trim();
+    meta.nit = $('suNit').value.trim();
+    if(!phone){ msg('authMsg','Los proveedores necesitan un teléfono de contacto.'); return; }
+    if(!meta.address){ msg('authMsg','Ingresa la dirección de tu negocio.'); return; }
+    if(!meta.website){ msg('authMsg','Ingresa tu Instagram, Facebook o sitio web para poder verificar tu negocio.'); return; }
+  }
   $('suBtn').disabled = true;
   const { data, error } = await sb.auth.signUp({
     email, password: pass,
-    options: { data: { full_name:name, role:signupRole, phone } }
+    options: { data: meta }
   });
   $('suBtn').disabled = false;
   if(error){ msg('authMsg', trErr(error.message)); return; }
@@ -765,7 +824,7 @@ async function loadProfile(){
   if(!profile){
     // fallback: create from metadata if trigger didn't run
     const md = session.user.user_metadata||{};
-    const ins = { id: session.user.id, role: md.role==='provider'?'provider':'client', full_name: md.full_name||session.user.email, phone: md.phone||null, email: session.user.email };
+    const ins = { id: session.user.id, role: md.role==='provider'?'provider':'client', full_name: md.full_name||session.user.email, phone: md.phone||null, email: session.user.email, address: md.address||null, website: md.website||null, nit: md.nit||null };
     const { data: p } = await sb.from('wp_profiles').insert(ins).select().maybeSingle();
     profile = p || ins;
   }
@@ -799,12 +858,12 @@ const fmtAvg = id => { const a=reviewsAgg[id]; return a ? (a.sum/a.count).toFixe
 async function loadListings(){
   const [{ data, error }] = await Promise.all([
     sb.from('wp_listings')
-      .select('*, wp_profiles(full_name, phone, plan, plan_expires_at)')
+      .select('*, wp_profiles(full_name, phone, plan, plan_expires_at, verified, created_at, address, website)')
       .eq('active', true)
       .order('created_at', { ascending:false }),
     loadReviewsAgg()
   ]);
-  allListings = error ? [] : (data||[]);
+  allListings = (error ? [] : (data||[])).filter(l => l.wp_profiles?.verified);
   allListings.forEach(l => l._feat = isPremiumProfile(l.wp_profiles));
   allListings.sort((a,b) => (b._feat?1:0) - (a._feat?1:0));
   renderCards();
@@ -902,6 +961,11 @@ function openDetail(id){
   $('dCat').textContent = (CATS[l.category]||l.category) + (l._feat?' · ★ Destacado':'');
   $('dTitle').textContent = l.title;
   $('dLoc').textContent = l.location||'';
+  const pp = l.wp_profiles||{};
+  const desde = pp.created_at ? new Date(pp.created_at).toLocaleDateString('es-GT',{month:'long',year:'numeric'}) : '';
+  $('dTrust').innerHTML = `✓ Proveedor verificado${desde?' · miembro desde '+esc(desde):''}`
+    + (pp.address?`<span style="color:var(--muted)"> · ${esc(pp.address)}</span>`:'')
+    + (pp.website?` · <a href="${esc(/^https?:\/\//.test(pp.website)?pp.website:'https://'+pp.website)}" target="_blank" rel="noopener" style="color:var(--gold-dark);border-bottom:1px solid var(--gold-dark)">ver redes / sitio</a>`:'');
   $('dDesc').textContent = l.description||'';
   $('dPrice').innerHTML = l.price_from!=null?`${fmtQ(l.price_from)} <small>${esc(l.price_unit||'')}</small>`:'Precio a consultar';
   $('bookTitle').textContent = l.category==='venue' ? 'Solicitar reserva' : 'Solicitar servicio';
@@ -915,6 +979,54 @@ function openDetail(id){
   $('detailOverlay').classList.remove('hidden');
 }
 function closeDetail(){ $('detailOverlay').classList.add('hidden'); }
+
+/* ---- mi negocio (perfil del proveedor) ---- */
+function openBizForm(){
+  $('bizPhone').value = profile.phone||'';
+  $('bizAddr').value = profile.address||'';
+  $('bizWeb').value = profile.website||'';
+  $('bizNit').value = profile.nit||'';
+  $('bizFile').value = '';
+  paintBizPhoto(profile.business_photo_url||null);
+  msg('bizMsg','');
+  $('bizOverlay').classList.remove('hidden');
+}
+function closeBiz(){ $('bizOverlay').classList.add('hidden'); }
+function paintBizPhoto(src){
+  $('bizPreview').classList.toggle('hidden', !src);
+  $('bizUpEmpty').classList.toggle('hidden', !!src);
+  if(src) $('bizPreview').src = src;
+}
+function previewBizPhoto(input){
+  const f = input.files && input.files[0];
+  if(f) paintBizPhoto(URL.createObjectURL(f));
+}
+async function saveBiz(){
+  const payload = {
+    phone: $('bizPhone').value.trim()||null,
+    address: $('bizAddr').value.trim()||null,
+    website: $('bizWeb').value.trim()||null,
+    nit: $('bizNit').value.trim()||null
+  };
+  $('bizBtn').disabled = true;
+  const f = $('bizFile').files && $('bizFile').files[0];
+  if(f){
+    $('bizBtn').textContent = 'Subiendo foto…';
+    try{
+      payload.business_photo_url = await uploadPhoto(f);
+    }catch(e){
+      $('bizBtn').disabled = false; $('bizBtn').textContent = 'Guardar';
+      msg('bizMsg','No se pudo subir la foto: '+(e.message||e));
+      return;
+    }
+  }
+  const { error } = await sb.from('wp_profiles').update(payload).eq('id', session.user.id);
+  $('bizBtn').disabled = false; $('bizBtn').textContent = 'Guardar';
+  if(error){ msg('bizMsg','No se pudo guardar: '+error.message); return; }
+  Object.assign(profile, payload);
+  closeBiz();
+  toast('Datos del negocio guardados');
+}
 
 /* ---- calendario de disponibilidad ---- */
 function calHTML(state, blockedSet, actFn, selected){
@@ -1117,7 +1229,7 @@ function renderDash(){
   $('dashSub').textContent = isProv ? 'Gestiona tus anuncios y responde a las solicitudes de las parejas.' : 'Da seguimiento a tus reservas y solicitudes de servicios.';
   $('provPanel').classList.toggle('hidden', !isProv);
   $('clientPanel').classList.toggle('hidden', isProv);
-  if(isProv){ renderPlanBanner(); loadMyListings(); loadRequests(); loadProvBlocked(); } else loadMyBookings();
+  if(isProv){ renderVerifBanner(); renderPlanBanner(); loadMyListings(); loadRequests(); loadProvBlocked(); } else loadMyBookings();
 }
 
 function renderPlanBanner(){
@@ -1141,6 +1253,27 @@ function renderPlanBanner(){
   }
 }
 
+function reportListing(){
+  const l = curListing || {};
+  const subject = encodeURIComponent('Reporte de anuncio — Wedding Planner');
+  const body = encodeURIComponent(
+    `Quiero reportar este anuncio:\n\nAnuncio: ${l.title||''}\nID: ${l.id||''}\nProveedor: ${l.wp_profiles?.full_name||''}\n\nMotivo del reporte:\n`);
+  location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+}
+
+function renderVerifBanner(){
+  const v = !!profile.verified;
+  $('verifBanner').classList.toggle('hidden', v);
+  if(!v){
+    $('verifBanner').innerHTML = `
+      <div class="grow">
+        <div class="serif" style="color:var(--red)">Cuenta pendiente de verificación</div>
+        <p>Nuestro equipo está revisando tu negocio. Tus anuncios serán visibles en el catálogo cuando tu cuenta sea aprobada. Completa tu perfil (foto, dirección, redes) para acelerar la revisión.</p>
+      </div>
+      <button class="btn ghost sm" onclick="openBizForm()">Completar mi perfil</button>`;
+  }
+}
+
 function upgradePlan(){
   if(!session || !profile){ openAuth('signup','provider'); return; }
   if(profile.role!=='provider'){ toast('El plan Destacado es para cuentas de proveedor.'); return; }
@@ -1154,13 +1287,15 @@ function upgradePlan(){
   location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
 }
 
-/* ---- admin: activar plan desde el enlace del correo ---- */
-let pendingActivation = null;
+/* ---- admin: activar plan / verificar proveedor desde el enlace del correo ---- */
+let pendingActivation = null; // { type: 'plan' | 'verify', email }
 
 function checkActivationParam(){
-  const email = new URLSearchParams(location.search).get('activar');
-  if(!email) return;
-  pendingActivation = email;
+  const params = new URLSearchParams(location.search);
+  const planEmail = params.get('activar');
+  const verEmail = params.get('verificar');
+  if(!planEmail && !verEmail) return;
+  pendingActivation = planEmail ? { type:'plan', email:planEmail } : { type:'verify', email:verEmail };
   history.replaceState(null, '', location.pathname);
   tryOpenAdmin();
 }
@@ -1169,21 +1304,46 @@ function tryOpenAdmin(){
   if(!pendingActivation) return;
   if(!session){
     openAuth('login');
-    msg('authMsg', 'Entra con tu cuenta de administrador para activar el plan Destacado de: ' + pendingActivation, true);
+    msg('authMsg', 'Entra con tu cuenta de administrador para ' +
+      (pendingActivation.type==='plan' ? 'activar el plan Destacado de: ' : 'verificar al proveedor: ') + pendingActivation.email, true);
     return;
   }
   if((session.user.email||'').toLowerCase() !== ADMIN_EMAIL.toLowerCase()){
-    toast('Solo el administrador puede activar planes.');
+    toast('Solo el administrador puede hacer esta acción.');
     pendingActivation = null;
     return;
   }
   closeAuth();
-  $('admEmail').textContent = pendingActivation;
-  msg('admMsg','');
-  $('adminOverlay').classList.remove('hidden');
+  if(pendingActivation.type==='plan'){
+    $('admEmail').textContent = pendingActivation.email;
+    msg('admMsg','');
+    $('adminOverlay').classList.remove('hidden');
+  } else {
+    $('verEmail').textContent = pendingActivation.email;
+    msg('verMsg','');
+    $('verifyOverlay').classList.remove('hidden');
+  }
 }
 
 function closeAdmin(){ $('adminOverlay').classList.add('hidden'); pendingActivation = null; }
+function closeVerify(){ $('verifyOverlay').classList.add('hidden'); pendingActivation = null; }
+
+async function adminSetVerified(verified){
+  msg('verMsg','');
+  const email = $('verEmail').textContent;
+  const { data, error } = await sb.functions.invoke('wp-admin-verify', { body: { email, verified } });
+  if(error || !data || data.ok === false){
+    const code = data?.error || error?.message || 'error';
+    msg('verMsg', code==='no_user' ? 'No existe ninguna cuenta con ese correo.'
+      : code==='no_provider' ? 'Esa cuenta no es de proveedor.'
+      : code==='not_admin' ? 'Solo el administrador puede verificar proveedores.'
+      : 'No se pudo actualizar: '+code);
+    return;
+  }
+  closeVerify();
+  toast(data.verified ? `✓ ${data.name} verificado — sus anuncios ya son visibles` : `${data.name} quedó sin verificación`);
+  loadListings();
+}
 
 async function adminSetPlan(days){
   msg('admMsg','');
