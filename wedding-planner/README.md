@@ -21,6 +21,27 @@ Pages, Netlify, etc. El backend (cuentas, anuncios y reservas) es Supabase.
   declina desde su panel. La sección de planes solo se muestra a proveedores
   y visitantes, no a las parejas.
 
+## Verificación de proveedores
+
+- El registro de proveedor pide: nombre del negocio, teléfono (obligatorio),
+  dirección, Instagram/Facebook/sitio web (obligatorio) y NIT (opcional).
+  Desde su panel ("Mi negocio") puede agregar la foto del negocio.
+- Todo proveedor nuevo queda **pendiente de verificación**: sus anuncios no
+  aparecen en el catálogo hasta ser aprobado. Al registrarse, el administrador
+  recibe un correo con los datos y un botón **"Revisar y aprobar"** (enlace
+  `?verificar=<correo>`), que abre la app y permite aprobar o quitar la
+  verificación con un clic (edge function `wp-admin-verify`).
+- Los proveedores aprobados muestran "✓ Proveedor verificado · miembro desde…"
+  en el detalle de sus anuncios, junto con su dirección y enlace a redes.
+- Las parejas tienen un enlace "Reportar este anuncio" que abre un correo al
+  administrador.
+
+### Recomendado: activar en el panel de Supabase (Authentication)
+
+1. **Confirm email** activado (Sign In / Up) — evita registros con correos falsos.
+2. **Leaked password protection** (Passwords) — rechaza contraseñas filtradas.
+3. **CAPTCHA** (Attack Protection) — frena bots en el registro.
+
 ## Planes para proveedores (monetización)
 
 - **Gratis:** 1 anuncio activo. Es el plan con el que nace toda cuenta de
